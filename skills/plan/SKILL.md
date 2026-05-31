@@ -9,14 +9,14 @@ Turn the idea into a technical plan anchored to the project: where it fits, what
 
 ## Inputs
 
-Work with whatever is in the conversation: a task described by the user, a pasted ticket, a previous interrogation, a link.
+Work with whatever is in the conversation: a task described by the user, a pasted ticket, a prior interrogation or discussion, a link. Absorb any assumptions and decisions already settled in the conversation as input to the plan — once integrated, the plan becomes the source of truth.
 
-If there is a `<!-- GRILL RESULT -->` block in the recent conversation, absorb it: its assumptions and decisions are input to the plan. After integrating them, treat that information as consumed — the source of truth becomes the plan.
+If the task is still ambiguous and nothing has resolved it yet, say so and ask the user to align first rather than planning on guesses.
 
 ## Procedure
 
 1. Read the project's `AGENTS.md`. The project always wins; never assume stack or architecture.
-2. If you need a structural map of the repo and reading it yourself would contaminate your context, **delegate to `code-explorer`** instead of reading files directly.
+2. If you need a structural map of the repo and reading it yourself would contaminate your context, **delegate to the `Explore` subagent** instead of reading files directly.
 3. Build the plan covering (in order, concise):
    - **Fit in the project**: functional domain, the module/bounded context it lands in, evolutionary or new, crossed contexts if any.
    - **Affected modules**: for each one, the action (create / extend / refactor) and why.
@@ -27,7 +27,7 @@ If there is a `<!-- GRILL RESULT -->` block in the recent conversation, absorb i
    - **Effort**: S/M/L/XL with a one-line justification. If XL, flag for decomposition.
    - **Prior dependencies**: if something must happen first.
 4. Present the plan to the user as bullets, not prose. Wait for reaction before continuing.
-5. When the user gives it the green light, read `~/harness/<slug>/config.json` if it exists and **ask where to deposit the plan**. Suggest options based on the user's setup (ClickUp, local markdown, original ticket, just-conversation). Execute the chosen destination if you can; otherwise, leave the block ready for copy-paste.
+5. When the user gives it the green light, **ask where to deposit the plan**. Suggest options based on the user's setup (ClickUp, local markdown, original ticket, just-conversation). Execute the chosen destination if you can; otherwise, leave the block ready for copy-paste.
 
 ## Output (in conversation)
 

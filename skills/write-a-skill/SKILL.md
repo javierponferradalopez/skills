@@ -18,10 +18,9 @@ times and is worth formalizing.
    - When should it trigger — what words, contexts, file types?
    - Does it write artifacts or just guide? Persisted or ephemeral?
    - Any reference material, or a deterministic step worth a script?
-2. **Decide skill vs command** (below).
-3. **Name it** following the harness convention (below).
-4. **Draft** the SKILL.md from the template. Keep it short; split detail out.
-5. **Review with the user**, then **install** (below).
+2. **Name it** following the harness convention (below).
+3. **Draft** the SKILL.md from the template. Keep it short; split detail out.
+4. **Review with the user**, then **install** (below).
 
 ## Name it — intent only, no prefixes
 
@@ -29,36 +28,14 @@ The name is the **intention** of the skill, verb-first where natural (`grill`, `
 
 If two skills feel like they need the same name with a modifier, they probably want to be a single skill with a question in step 1 ("¿quieres persistir esto?") rather than two skills.
 
-## Skill vs command
-
-- **Skill** — the agent auto-triggers it by matching its description to context. Use for capabilities the agent should reach for on its own.
-- **Command** (lives in the agent's commands directory, invoked `/name`) — an explicit, conscious one-shot the user fires themselves (like `/handoff`, `/github-pr`, `/project-init`). Prefer a command when nothing should auto-trigger the action.
-
 ## Stateless by default
 
-Skills are stateless by default: they live in the conversation and write nothing to disk. The only persistent point in the system is the `/handoff` command, which collapses the current task into `~/harness/<slug>/<task-id>/handoff.md` when the user asks for it. If a skill needs to produce a reusable artifact (a plan, a list of subtasks, a verification summary, etc.), it must **ask the user where to deposit it** (ClickUp, markdown, original ticket, just-conversation) instead of persisting unilaterally.
+Skills are stateless by default: they live in the conversation and write nothing to disk. If a skill needs to produce a reusable artifact (a plan, a list of subtasks, a verification summary, etc.), it must **ask the user where to deposit it** (ClickUp, markdown, original ticket, just-conversation) instead of persisting unilaterally.
 
 ## SKILL.md template
 
-```md
----
-name: <name>
-description: <what it does>. Use when <specific triggers>.
----
-
-# <Title>
-
-[One or two lines on what this does and when to reach for it.]
-
-## Procedure
-[Numbered steps, or a checklist for anything non-trivial.]
-
-## Output
-[If it writes something: where, and a template. Otherwise omit.]
-
-## Anti-patterns
-[The mistakes this skill exists to prevent.]
-```
+Start from [`TEMPLATE.md`](TEMPLATE.md) — copy it to `skills/<name>/SKILL.md` and
+fill in each section. Drop `## Output` if the skill writes nothing.
 
 ## The description is everything
 
