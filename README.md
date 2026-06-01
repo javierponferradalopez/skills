@@ -75,7 +75,7 @@ The agent in the conversation (with the user) decides which skill to invoke next
 | [`grill-me`](./skills/grill-me/SKILL.md)           | Interrogating an idea until every ambiguity is resolved — walking down each branch of the design tree, one question at a time.            |
 | [`plan`](./skills/plan/SKILL.md)                   | Producing a structured technical plan — affected modules, decisions, risks, side effects, rough effort.                                   |
 | [`diagnose`](./skills/diagnose/SKILL.md)           | Hard bugs, unclear regressions, perf problems: reproduce → minimise → hypothesise → instrument → fix → regression-test.                   |
-| [`code-standars`](./skills/code-standars/SKILL.md) | Reviewing, auditing, or evaluating JS/TS code against the engineering canon — read-only findings report with severity levels and fixes.   |
+| [`code-standards`](./skills/code-standards/SKILL.md) | Reviewing, auditing, or evaluating JS/TS code against the engineering canon — read-only findings report with severity levels and fixes.   |
 | [`write-adr`](./skills/write-adr/SKILL.md)         | A non-trivial, hard-to-reverse technical decision deserves a lightweight ADR.                                                             |
 | [`write-a-skill`](./skills/write-a-skill/SKILL.md) | Adding, writing, or reworking a harness skill; formalizing a procedure you keep repeating by hand.                                        |
 | [`github-pr`](./skills/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
