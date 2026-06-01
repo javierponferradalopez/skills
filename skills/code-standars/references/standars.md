@@ -183,7 +183,14 @@ the real impact in the context you're reviewing.
 > conflict. Keep the same format: rule statement, "Flag when…", and default severity. A rule you
 > can't verify is useless for reviewing: make it concrete before saving it.
 
-*(Empty for now — add your rules here.)*
+- **Deep modules, not shallow ones (team rule).** Flag any exported module, class, or function
+  whose interface complexity approaches its implementation complexity: many small methods that
+  just delegate, options objects that mirror internal state, or abstractions that force the
+  caller to know how the internals work. Ask: can the caller do their job knowing only the
+  signature? If not, the interface is leaking. Severity: 🟠.
+  *(Source: A Philosophy of Software Design — Ousterhout)*
+  Rationale: shallow modules shift complexity to the caller instead of hiding it — every call
+  site pays the cost. We treat this as a Major because it compounds across the codebase.
 
 <!--
 Template:
