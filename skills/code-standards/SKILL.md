@@ -1,120 +1,68 @@
 ---
-name: code-standards-review
-description: Reviews JavaScript and TypeScript code against a set of quality standards distilled from the classics of software engineering (Clean Code, The Pragmatic Programmer, A Philosophy of Software Design, Refactoring, The Design of Design, and more) and produces a findings report with severity levels. Use this skill WHENEVER the user asks to review, audit, or evaluate JS/TS code, asks whether their code meets the standards, is clean, is maintainable, or follows best practices, shares a .js/.ts/.jsx/.tsx file or a snippet for critique, or asks for a code review. This is a READ-ONLY skill that reports problems and proposes how to fix them, but does not modify the code unless the user explicitly asks afterward.
+name: code-standards
+description: A language-agnostic quality bar for generating and validating good code, focused on what models get wrong by default — deep modules, designing errors out of existence, behavior-driven tests that mock only at boundaries, and restraint against speculative abstraction. Use when writing, reviewing, refactoring, or judging code in any language, or when the user references coding standards, clean code, deep modules, or asks whether code is clean, maintainable, or well designed.
 ---
 
-# Code Standards Review (JS/TS)
+# Code Standards
 
-This skill applies a concrete, actionable set of standards to review JavaScript/TypeScript
-code. The standards are distilled from the canon of software engineering (see
-`references/sources.md`) and written as verifiable rules.
+## Reconcile with the repo first
 
-The goal is not to show off theory: it is to produce a **useful report** that says what is
-wrong, **why it matters** (citing the source of the principle), and **how to fix it**.
+This is the universal floor. Layer the repo's own rules on top — on conflict, the repo
+wins. Read `AGENTS.md` / `CLAUDE.md`, and any `CONTEXT.md` or `docs/adr/`, before judging.
+Team-specific rules added to this file take priority over everything below.
 
-## Guiding principle
+## Interface design
 
-Don't report noise. Every finding must earn its place: it must genuinely affect correctness,
-readability, maintainability, or design. A report with 40 nitpicks is worse than one with the
-6 problems that truly matter. Prioritize signal over volume.
+**Deep modules** — small interface, deep implementation: a few methods with simple
+params hiding complex logic behind them. Avoid shallow modules (a large interface that
+just forwards to a thin implementation) and pass-through classes. When designing, ask:
+can I reduce the number of methods? Simplify the params? Hide more complexity inside?
 
-## Workflow
+**Design for testability**:
 
-1. **Identify what to review.** It may be an uploaded file, a snippet pasted in the chat, or
-   several files from a repo. If the scope of the review is unclear, ask in a single sentence
-   before starting.
+1. **Accept dependencies, don't create them** — pass external deps in rather than
+   constructing them internally.
+2. **Return results, don't produce side effects** — a function that returns a value is
+   easier to reason about and test than one that mutates state.
+3. **Small surface area** — fewer methods = fewer tests; fewer params = simpler setup.
 
-2. **Load the standards.** Read `references/standards.md` in full before evaluating. It holds
-   the rules grouped by category, each with its default severity and the source of the
-   principle. If you need to recall what each book contributes, consult `references/sources.md`.
+**Scrutinize optional parameters** — a major source of bugs by omission. Prefer
+correctness over backwards compatibility.
 
-3. **Read the code carefully.** Don't stay on the surface. Understand what it does, what
-   responsibilities each function/module has, where the boundaries and dependencies are. Many
-   of the serious problems (coupling, wrong abstractions, accidental complexity) only become
-   visible by reading it properly.
+## Design errors out of existence
 
-4. **Evaluate category by category.** Walk through the categories in `standards.md`. For each
-   potential finding, ask: does this genuinely affect quality, or is it just my preference?
-   Only report the former.
+Prefer designs that remove special cases over code that handles them. Return an empty
+collection instead of a null/nil sentinel; where the language allows, make invalid states
+unrepresentable (sum types, enums, required fields that travel together) instead of
+guarding against them at every call site.
 
-5. **Assign a severity** to each finding (see scale below). Adjust the rule's default severity
-   to the real impact in *this* context.
+## Restraint
 
-6. **Produce the report** in the format defined below. Do not edit the code: this skill only
-   reports.
+- **No speculative generality.** No config, layers, or abstraction "just in case." Build
+  for the case in front of you, not an imagined future one.
+- **Don't force DRY.** Two fragments that look alike today but change for different
+  reasons should stay separate. The wrong abstraction costs more than duplication.
+- **Conceptual integrity.** Solve the same kind of problem the same way sibling modules
+  do. Coherence across the system beats any single clever feature.
 
-## Severity scale
+## Testing
 
-- 🔴 **Blocker** — Seriously compromises correctness, security, or maintainability. Examples:
-  silently swallowed errors, massive duplication of logic, `any` that voids the type contract
-  at a critical boundary, a giant function that's impossible to test.
-- 🟠 **Major** — A clear smell that should be fixed soon. Examples: a function that does too
-  many things, misleading names, high coupling, a leaky abstraction.
-- 🟡 **Minor** — A readability or consistency improvement, low risk. Examples: an improvable
-  name, a redundant comment, avoidable nesting.
-- 🔵 **Suggestion** — An optional improvement or refactor the author can take or leave.
+Tests verify **behavior through public interfaces, not implementation details**. Code can
+change entirely; tests shouldn't break unless behavior changed.
 
-## Report format
+- Test what callers care about, through the public API only.
+- One logical assertion per test.
+- Mock only at **system boundaries** (external APIs, time/randomness, FS/DB when no real
+  instance is practical). **Never mock your own modules or internal collaborators** — if
+  something is hard to test without that, redesign the interface.
+- Don't test trivial one-liners or thin delegation; the test just mirrors the code.
 
-Write the report in **English by default**. If the user asks for it in another language (for
-example Spanish), write it in that language instead — follow the user's request.
+See [references/testing.md](references/testing.md) for GOOD/BAD examples and the full
+red-flag list.
 
-Deliver the report **inline in the conversation** as your response. Do **not** create a file.
-After presenting the report, you may offer to export it to a file (e.g. Markdown) if the user
-wants to keep it.
+## When reviewing
 
-Always use this structure:
-
-\`\`\`markdown
-# Code Standards Review
-
-**Scope:** <files or snippet reviewed>
-**Verdict:** ✅ Pass · ⚠️ Pass with observations · ❌ Fail
-
-## Summary
-<1–3 sentences: overall state and the 1–2 dominant themes>
-
-## Findings
-
-### 🔴 Blockers
-- **[Category] Short title** — \`file:line\`
-  - **What's happening:** <concrete description, pointing at the code>
-  - **Why it matters:** <real impact> *(Source: <book / principle>)*
-  - **How to fix it:** <specific action, not generic advice>
-
-### 🟠 Major
-<same format>
-
-### 🟡 Minor
-<same format; you may condense simple ones into single bullets>
-
-### 🔵 Suggestions
-<same format>
-
-## What's good
-<2–4 bullets of concrete positive reinforcement — what's well solved and why>
-\`\`\`
-
-Report rules:
-- If a severity section is empty, **omit it** (don't write "None").
-- Always cite the source of the principle in parentheses at the end of "Why it matters".
-- "How to fix it" must be specific to this code, not generic book advice.
-- The "What's good" section is not optional: a good review also recognizes what's done well
-  (it reinforces good habits and makes the report more credible and actionable).
-
-## Verdict
-
-- ✅ **Pass** — No blockers and no major issues. At most minor ones/suggestions.
-- ⚠️ **Pass with observations** — No blockers, but one or more major issues.
-- ❌ **Fail** — At least one blocker.
-
-## Extending the standards
-
-The standards live in `references/standards.md`. There is a final section marked
-**"Team-specific standards"** meant for the user to add their own rules over time. When the
-user asks to add a rule:
-- Add it to that section using the same format (rule, what to flag, default severity).
-- Team-specific rules **take priority** over the canon if they conflict: they are deliberate
-  team decisions.
-- If the user describes a vague rule, help them turn it into something verifiable before
-  saving it (a rule you can't check is useless for reviewing).
+When this skill is used to review rather than write, it is **read-only**: report what
+violates the bar, why it matters, and the specific fix — but don't edit the code unless
+the user asks afterward. Don't report noise: only flag what genuinely affects
+correctness, maintainability, or design, and acknowledge what's done well.

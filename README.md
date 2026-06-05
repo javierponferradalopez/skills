@@ -75,10 +75,11 @@ The agent in the conversation (with the user) decides which skill to invoke next
 | [`grill-me`](./skills/grill-me/SKILL.md)           | Interrogating an idea until every ambiguity is resolved — walking down each branch of the design tree, one question at a time.            |
 | [`plan`](./skills/plan/SKILL.md)                   | Producing a structured technical plan — affected modules, decisions, risks, side effects, rough effort.                                   |
 | [`diagnose`](./skills/diagnose/SKILL.md)           | Hard bugs, unclear regressions, perf problems: reproduce → minimise → hypothesise → instrument → fix → regression-test.                   |
-| [`code-standards`](./skills/code-standards/SKILL.md) | Reviewing, auditing, or evaluating JS/TS code against the engineering canon — read-only findings report with severity levels and fixes.   |
+| [`code-standards`](./skills/code-standards/SKILL.md) | Writing or reviewing code in any language against a thin quality bar focused on what models get wrong by default — deep modules, errors designed out of existence, behavior-driven tests, restraint.   |
 | [`write-adr`](./skills/write-adr/SKILL.md)         | A non-trivial, hard-to-reverse technical decision deserves a lightweight ADR.                                                             |
 | [`write-a-skill`](./skills/write-a-skill/SKILL.md) | Adding, writing, or reworking a harness skill; formalizing a procedure you keep repeating by hand.                                        |
 | [`github-pr`](./skills/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
+| [`suggest-reviewers`](./skills/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
 | [`zoom-out`](./skills/zoom-out/SKILL.md)           | Stepping back for broader context or a higher-level perspective on an unfamiliar section of code.                                         |
 | [`handoff`](./skills/handoff/SKILL.md)             | Compacting the current conversation into a handoff document so a fresh agent can continue the work.                                       |
 

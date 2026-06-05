@@ -6,7 +6,7 @@
 - Examples: `feat(api): add rate-limited search endpoint`, `fix(web): resolve 500 on profile save`
 - Pick the dominant commit type; if mixed, choose the most impactful user-visible change (priority: feat, fix, perf, refactor, others).
 
-## Description — Markdown, English, no fluff
+## Description — Markdown, no fluff
 
 Rules: use `##` and below (NO `#`). No raw diffs. No code blocks in the body. Each bullet short. Infer the business "why" from the technical changes.
 
@@ -25,7 +25,7 @@ If a task/issue URL was provided, include it as the first line: `This PR resolve
     - [Specific implementation detail]
     - [Another relevant detail]
 
-### Commits
+### Commits (required)
 > Review each commit individually for easier navigation:
 
 | Commit | Summary |
