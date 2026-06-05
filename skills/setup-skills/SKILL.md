@@ -1,6 +1,6 @@
 ---
 name: setup-skills
-description: Sets up an `## Agent skills` block in AGENTS.md/CLAUDE.md and `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub or local markdown) and domain doc layout. if those skills appear to be missing context about the issue tracker or domain docs.
+description: Sets up an `## Agent skills` block in AGENTS.md/CLAUDE.md and `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub, local markdown, or ClickUp) and domain doc layout. if those skills appear to be missing context about the issue tracker or domain docs.
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Scaffold the per-repo configuration that the engineering skills assume:
 
-- **Issue tracker** — where issues live (GitHub by default; local markdown is also supported out of the box)
+- **Issue tracker** — where issues live (GitHub by default; local markdown and ClickUp are also supported out of the box)
 - **Domain docs** — where `CONTEXT.md` and ADRs live, and the consumer rules for reading them
 
 This is a prompt-driven skill, not a deterministic script. Explore, present what you found, confirm with the user, then write.
@@ -21,8 +21,8 @@ Look at the current repo to understand its starting state. Read whatever exists;
 
 - `git remote -v` and `.git/config` — is this a GitHub repo? Which one?
 - `AGENTS.md` and `CLAUDE.md` at the repo root — does either exist? Is there already an `## Agent skills` section in either?
-- `CONTEXT.md` and `CONTEXT-MAP.md` at the repo root
-- `docs/adr/` and any `src/*/docs/adr/` directories
+- `docs/CONTEXT.md`
+- `docs/adr/`
 - `docs/agents/` — does this skill's prior output already exist?
 - `.kanban/` — sign that a local-markdown issue tracker convention is already in use
 
@@ -40,16 +40,14 @@ Default posture: these skills were designed for GitHub. If a `git remote` points
 
 - **GitHub** — issues live in the repo's GitHub Issues (uses the `gh` CLI)
 - **Local markdown** — issues live as files under `.kanban/<feature>/` in this repo (good for solo projects or repos without a remote)
+- **ClickUp** — issues live as ClickUp tasks in a three-level hierarchy (product epic → tech task holding the PRD → nested issue subtasks), driven through the ClickUp MCP server
 - **Other** (Jira, Linear, etc.) — ask the user to describe the workflow in one paragraph; the skill will record it as freeform prose
 
 **Section B — Domain docs.**
 
-> Explainer: Some skills read a `CONTEXT.md` file to learn the project's domain language, and `docs/adr/` for past architectural decisions. They need to know whether the repo has one global context or multiple (e.g. a monorepo with separate frontend/backend contexts) so they look in the right place.
+> Explainer: Some skills read a `CONTEXT.md` file to learn the project's domain language, and `docs/adr/` for past architectural decisions. They live under `docs/` so the skills know where to look.
 
-Confirm the layout:
-
-- **Single-context** — one `CONTEXT.md` + `docs/adr/` at the repo root. Most repos are this.
-- **Multi-context** — `CONTEXT-MAP.md` at the root pointing to per-context `CONTEXT.md` files (typically a monorepo).
+The layout is fixed: one `docs/CONTEXT.md` glossary plus `docs/adr/` for architectural decisions.
 
 ### 3. Confirm and edit
 
@@ -83,13 +81,14 @@ The block:
 
 ### Domain docs
 
-[one-line summary of layout — "single-context" or "multi-context"]. See `docs/agents/domain.md`.
+Domain glossary at `docs/CONTEXT.md` + ADRs at `docs/adr/`. See `docs/agents/domain.md`.
 ```
 
 Then write the three docs files using the seed templates in this skill folder as a starting point:
 
 - [issue-tracker-github.md](./issue-tracker-github.md) — GitHub issue tracker
 - [issue-tracker-local.md](./issue-tracker-local.md) — local-markdown issue tracker
+- [issue-tracker-clickup.md](./issue-tracker-clickup.md) — ClickUp issue tracker (epic → tech task → nested issues)
 - [domain.md](./domain.md) — domain doc consumer rules + layout
 
 For "other" issue trackers, write `docs/agents/issue-tracker.md` from kanban using the user's description.
