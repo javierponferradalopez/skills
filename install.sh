@@ -45,15 +45,19 @@ mkdir -p "$TARGET_DIR/skills"
 ok "$TARGET_DIR"
 
 step "Installing skills"
-# Claude Code requires a flat layout: ~/.claude/skills/<name>/SKILL.md.
-# Each folder under skills/ here is one skill (with SKILL.md). Skill names
-# are intent-based (no category prefixes).
+# In this repo skills are organized into category folders for browsing:
+#   skills/<category>/<name>/SKILL.md   (e.g. skills/engineer/tdd/SKILL.md).
+# Claude Code requires a FLAT layout, so we flatten the categories away and
+# link every skill into ~/.claude/skills/<name>/. Categories are purely an
+# authoring convenience and never reach the install target. Skill names are
+# intent-based (no category prefixes), so they stay unique across categories.
 if [[ -d "$PACKAGE_DIR/skills" ]]; then
-    for skill_dir in "$PACKAGE_DIR/skills"/*/; do
-        [[ -d "$skill_dir" ]] || continue
-        [[ -f "${skill_dir}SKILL.md" ]] || continue
+    for skill_md in "$PACKAGE_DIR/skills"/*/*/SKILL.md; do
+        [[ -f "$skill_md" ]] || continue
+        skill_dir="$(dirname "$skill_md")"
         skill_name="$(basename "$skill_dir")"
-        link_if_safe "${skill_dir%/}" "$TARGET_DIR/skills/$skill_name" "skills/$skill_name"
+        category="$(basename "$(dirname "$skill_dir")")"
+        link_if_safe "$skill_dir" "$TARGET_DIR/skills/$skill_name" "$category/$skill_name"
     done
 fi
 

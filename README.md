@@ -48,48 +48,36 @@ The agent in the conversation (with the user) decides which skill to invoke next
 
 ## Skill catalog
 
-> Skills live flat at `~/.claude/skills/<name>/` (Claude Code requirement). Names are **intent-based**, no category prefixes.
+> In this repo skills are organized into category folders for browsing — `skills/<category>/<name>/`. Claude Code requires a flat layout, so the installer flattens the categories away and links each skill into `~/.claude/skills/<name>/`. Categories are an authoring convenience only; names are **intent-based** and stay unique across categories, with no category prefixes.
+
+Skills fall into two categories: **engineer** — the disciplined inner loop from a vague task to committed code (align → plan → build → commit) — and **productivity** — everything around that loop: diagnosis, architecture, code navigation, PR workflow, harness tooling, and learning.
+
+### Engineer
 
 | Skill                                              | Use when                                                                                                                                  |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| [`grill-me`](./skills/grill-me/SKILL.md)           | Interrogating an idea until every ambiguity is resolved — walking down each branch of the design tree, one question at a time.            |
-| [`grill-with-docs`](./skills/grill-with-docs/SKILL.md) | Stress-testing a plan against the project's documented domain — sharpens terminology and updates `CONTEXT.md`/ADRs inline as decisions crystallise. |
-| [`to-prd`](./skills/to-prd/SKILL.md)               | Turning the current conversation into a PRD and publishing it to the project issue tracker — synthesises what's known, no interview.       |
-| [`to-issues`](./skills/to-issues/SKILL.md)         | Breaking a plan, spec, or PRD into independently-grabbable issues on the tracker using tracer-bullet vertical slices.                      |
-| [`diagnose`](./skills/diagnose/SKILL.md)           | Hard bugs, unclear regressions, perf problems: reproduce → minimise → hypothesise → instrument → fix → regression-test.                   |
-| [`tdd`](./skills/tdd/SKILL.md)                     | Building a feature or fixing a bug test-first — a disciplined red-green-refactor loop in vertical slices, with behavior-driven integration tests. |
-| [`implement`](./skills/implement/SKILL.md)         | Implementing a single issue end-to-end and stopping with the tree dirty — fetches the issue, loads project context, applies the code-standards bar and red-green-refactor; no commit, push, branch, or issue close. |
-| [`validate`](./skills/validate/SKILL.md)           | Reviewing one issue's uncommitted implementation pre-commit in a fresh session — fixes bugs/edge-cases/quality in place, writes tests to break the code, flags spec gaps and scope creep; leaves the tree green, never commits. |
-| [`code-standards`](./skills/code-standards/SKILL.md) | Writing or reviewing code in any language against a thin quality bar focused on what models get wrong by default — deep modules, errors designed out of existence, behavior-driven tests, restraint.   |
-| [`improve-codebase-architecture`](./skills/improve-codebase-architecture/SKILL.md) | Finding deepening opportunities in a codebase — turning shallow modules into deep ones for testability and AI-navigability, presented as a visual before/after HTML report informed by `CONTEXT.md` and ADRs. |
-| [`write-a-skill`](./skills/write-a-skill/SKILL.md) | Adding, writing, or reworking a harness skill; formalizing a procedure you keep repeating by hand.                                        |
-| [`setup-skills`](./skills/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md` plus `docs/agents/` so the engineering skills know its issue tracker and domain-doc layout. |
-| [`commit`](./skills/commit/SKILL.md)               | Splitting a dirty working tree into an ordered list of atomic conventional commits — plans from `git diff HEAD`, commits only on an explicit literal OK. |
-| [`github-pr`](./skills/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
-| [`suggest-reviewers`](./skills/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
-| [`zoom-out`](./skills/zoom-out/SKILL.md)           | Stepping back for broader context or a higher-level perspective on an unfamiliar section of code.                                         |
-| [`handoff`](./skills/handoff/SKILL.md)             | Compacting the current conversation into a handoff document so a fresh agent can continue the work.                                       |
+| [`grill-me`](./skills/engineer/grill-me/SKILL.md)           | Interrogating an idea until every ambiguity is resolved — walking down each branch of the design tree, one question at a time.            |
+| [`grill-with-docs`](./skills/engineer/grill-with-docs/SKILL.md) | Stress-testing a plan against the project's documented domain — sharpens terminology and updates `CONTEXT.md`/ADRs inline as decisions crystallise. |
+| [`to-prd`](./skills/engineer/to-prd/SKILL.md)               | Turning the current conversation into a PRD and publishing it to the project issue tracker — synthesises what's known, no interview.       |
+| [`to-issues`](./skills/engineer/to-issues/SKILL.md)         | Breaking a plan, spec, or PRD into independently-grabbable issues on the tracker using tracer-bullet vertical slices.                      |
+| [`tdd`](./skills/engineer/tdd/SKILL.md)                     | Building a feature or fixing a bug test-first — a disciplined red-green-refactor loop in vertical slices, with behavior-driven integration tests. |
+| [`implement`](./skills/engineer/implement/SKILL.md)         | Implementing a single issue end-to-end and stopping with the tree dirty — fetches the issue, loads project context, applies the code-standards bar and red-green-refactor; no commit, push, branch, or issue close. |
+| [`validate`](./skills/engineer/validate/SKILL.md)           | Reviewing one issue's uncommitted implementation pre-commit in a fresh session — fixes bugs/edge-cases/quality in place, writes tests to break the code, flags spec gaps and scope creep; leaves the tree green, never commits. |
+| [`code-standards`](./skills/engineer/code-standards/SKILL.md) | Writing or reviewing code in any language against a thin quality bar focused on what models get wrong by default — deep modules, errors designed out of existence, behavior-driven tests, restraint.   |
+| [`commit`](./skills/engineer/commit/SKILL.md)               | Splitting a dirty working tree into an ordered list of atomic conventional commits — plans from `git diff HEAD`, commits only on an explicit literal OK. |
+
+### Productivity
+
+| Skill                                              | Use when                                                                                                                                  |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| [`diagnose`](./skills/productivity/diagnose/SKILL.md)           | Hard bugs, unclear regressions, perf problems: reproduce → minimise → hypothesise → instrument → fix → regression-test.                   |
+| [`improve-codebase-architecture`](./skills/productivity/improve-codebase-architecture/SKILL.md) | Finding deepening opportunities in a codebase — turning shallow modules into deep ones for testability and AI-navigability, presented as a visual before/after HTML report informed by `CONTEXT.md` and ADRs. |
+| [`zoom-out`](./skills/productivity/zoom-out/SKILL.md)           | Stepping back for broader context or a higher-level perspective on an unfamiliar section of code.                                         |
+| [`github-pr`](./skills/productivity/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
+| [`suggest-reviewers`](./skills/productivity/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
+| [`setup-skills`](./skills/productivity/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md` plus `docs/agents/` so the engineering skills know its issue tracker and domain-doc layout. |
+| [`write-a-skill`](./skills/productivity/write-a-skill/SKILL.md) | Adding, writing, or reworking a harness skill; formalizing a procedure you keep repeating by hand.                                        |
+| [`handoff`](./skills/productivity/handoff/SKILL.md)             | Compacting the current conversation into a handoff document so a fresh agent can continue the work.                                       |
+| [`teach`](./skills/productivity/teach/SKILL.md)                 | Learning a topic over multiple sessions — turns the current directory into a teaching workspace with a mission, citation-backed HTML lessons, reference cheat-sheets, and learning records. |
 
 ---
-
-## Invariants
-
-1. **Alignment before code.** Reach for `grill-me` or `grill-with-docs` when the task isn't already crystal-clear — but they're invoked by need, not forced order.
-2. **Stateless, never blocking.** Any skill runs on its own; it reads the conversation and asks the user for what it needs. Nothing is a hard stop.
-3. **Client repos stay clean.** Skills write nothing to the working tree unless you ask them to deposit an artifact there.
-4. **Technical debt is never silent.** Every shortcut leaves a tracked trail.
-5. **The project always wins.** Skills read `AGENTS.md` first; they never assume stack or architecture.
-6. **The user orchestrates, not the skills.** Each skill executes its single procedure and stops; it does not suggest the next step.
-
----
-
-## Extending the harness
-
-Rules of thumb:
-
-- One skill = one procedure. If you're doing two things, they're two skills.
-- The name is the intention, verb-first where natural. No category prefixes.
-- Description is intent-based: lead with what it does, then `Use when …` with concrete triggers. The description is the only thing the agent sees when deciding whether to load the skill.
-- Keep `SKILL.md` short (aim < 100 lines). Push detail into sibling files and reference them (progressive disclosure).
-- If a skill produces a reusable artifact, end with the destination question — never persist unilaterally.
-- Don't create a skill until you've done the procedure by hand 2–3 times.
