@@ -81,3 +81,15 @@ Skills fall into two categories: **engineer** — the disciplined inner loop fro
 | [`teach`](./skills/productivity/teach/SKILL.md)                 | Learning a topic over multiple sessions — turns the current directory into a teaching workspace with a mission, citation-backed HTML lessons, reference cheat-sheets, and learning records. |
 
 ---
+
+## Credits
+
+Many of these skills are based on [Matt Pocock's skills](https://github.com/mattpocock/skills), adapted to my own needs.
+
+---
+
+## License
+
+Released under the [MIT License](./LICENSE).
+
+---
