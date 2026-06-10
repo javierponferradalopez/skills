@@ -6,12 +6,40 @@
 #   - Idempotent: re-running is safe.
 #   - Non-destructive: extends rather than replaces. If a skill
 #     with the same name already exists, it is skipped (your version wins).
+#   - Interactive: when run in a terminal, a TUI lets you pick which skills
+#     to install. Pass --all to install everything without prompting (useful
+#     for piped/non-interactive installs).
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$SCRIPT_DIR"
 TARGET_DIR="$HOME/.claude"
+
+INSTALL_ALL=0
+for arg in "$@"; do
+    case "$arg" in
+        --all|-a) INSTALL_ALL=1 ;;
+        -h|--help)
+            cat <<'EOF'
+Usage: ./install.sh [options]
+
+Options:
+  -a, --all    Install every skill without showing the selection TUI.
+  -h, --help   Show this help.
+
+With no options, an interactive TUI lets you choose which skills to install
+(arrow keys / j-k to move, space to toggle, a to toggle all, enter to confirm,
+q or esc to abort). If stdin is not a terminal, all skills are installed.
+EOF
+            exit 0
+            ;;
+        *)
+            echo "error: unknown option '$arg' (try --help)" >&2
+            exit 2
+            ;;
+    esac
+done
 
 if [[ ! -d "$PACKAGE_DIR/skills" ]]; then
     echo "error: package skills/ not found at $PACKAGE_DIR" >&2
@@ -40,25 +68,211 @@ link_if_safe() {
     fi
 }
 
-step "Ensuring ~/.claude/ structure"
-mkdir -p "$TARGET_DIR/skills"
-ok "$TARGET_DIR"
-
-step "Installing skills"
+# ---------------------------------------------------------------------------
+# Discover skills.
+#
 # In this repo skills are organized into category folders for browsing:
 #   skills/<category>/<name>/SKILL.md   (e.g. skills/engineer/tdd/SKILL.md).
 # Claude Code requires a FLAT layout, so we flatten the categories away and
 # link every skill into ~/.claude/skills/<name>/. Categories are purely an
 # authoring convenience and never reach the install target. Skill names are
 # intent-based (no category prefixes), so they stay unique across categories.
-if [[ -d "$PACKAGE_DIR/skills" ]]; then
-    for skill_md in "$PACKAGE_DIR/skills"/*/*/SKILL.md; do
-        [[ -f "$skill_md" ]] || continue
-        skill_dir="$(dirname "$skill_md")"
-        skill_name="$(basename "$skill_dir")"
-        category="$(basename "$(dirname "$skill_dir")")"
-        link_if_safe "$skill_dir" "$TARGET_DIR/skills/$skill_name" "$category/$skill_name"
+# ---------------------------------------------------------------------------
+DIRS=()        # absolute skill source directories
+LABELS=()      # "<category>/<name>" for logging
+NAMES=()       # "<name>" — symlink target basename
+DESCS=()       # one-line description from each SKILL.md frontmatter
+for skill_md in "$PACKAGE_DIR/skills"/*/*/SKILL.md; do
+    [[ -f "$skill_md" ]] || continue
+    skill_dir="$(dirname "$skill_md")"
+    skill_name="$(basename "$skill_dir")"
+    category="$(basename "$(dirname "$skill_dir")")"
+    # Pull the `description:` value out of the YAML frontmatter (first match).
+    desc="$(sed -n 's/^description:[[:space:]]*//p' "$skill_md" | head -1)"
+    DIRS+=("$skill_dir")
+    LABELS+=("$category/$skill_name")
+    NAMES+=("$skill_name")
+    DESCS+=("${desc:-No description.}")
+done
+
+if [[ ${#DIRS[@]} -eq 0 ]]; then
+    echo "error: no skills found under $PACKAGE_DIR/skills" >&2
+    exit 1
+fi
+
+# Selection mask: 1 = install, 0 = skip. Nothing selected by default in the
+# TUI; press 'a' to select all. Non-interactive modes (--all / piped) select
+# everything below.
+SELECTED=()
+for _ in "${DIRS[@]}"; do SELECTED+=(0); done
+
+# ---------------------------------------------------------------------------
+# Interactive selection TUI (pure bash, no external dependencies).
+# Skipped when --all is passed or stdin is not a terminal.
+# ---------------------------------------------------------------------------
+tui_select() {
+    local n=${#DIRS[@]}
+    local cursor=0
+    local key rest i s
+
+    # Hide cursor; always restore it on exit.
+    printf '\033[?25l'
+    trap 'printf "\033[?25h"' RETURN
+
+    # Row 0 is a synthetic "Select all" entry; rows 1..n map to SELECTED[row-1].
+    # The cursor therefore ranges over 0..n (rows = n + 1).
+    local rows=$((n + 1))
+
+    # Distinct categories (used for layout height: one header line per group).
+    local cats=0 prev=""
+    for ((i = 0; i < n; i++)); do
+        local c="${LABELS[i]%%/*}"
+        if [[ "$c" != "$prev" ]]; then cats=$((cats + 1)); prev="$c"; fi
     done
+
+    # Detail pane: wrap the focused skill's description to the terminal width.
+    # Height is fixed (computed once) so the in-place redraw stays aligned.
+    local cols width
+    cols="$(tput cols 2>/dev/null || echo 80)"
+    [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
+    width=$((cols - 6))
+    [[ $width -lt 24 ]] && width=24
+    local detail_h=2 c lc
+    for ((i = 0; i < n; i++)); do
+        lc="$(printf '%s\n' "${DESCS[i]}" | fold -s -w "$width" | wc -l)"
+        if [[ "$lc" -gt "$detail_h" ]]; then detail_h="$lc"; fi
+    done
+    [[ $detail_h -gt 5 ]] && detail_h=5
+
+    # Number of lines the previous frame printed; the next frame moves the
+    # cursor up exactly that many to redraw in place. Counted live (drawn++)
+    # rather than computed by formula, so layout edits can't desync it.
+    local total=0 drawn
+
+    local first=1
+    while true; do
+        if [[ $first -eq 1 ]]; then
+            first=0
+        else
+            printf '\033[%dA' "$total"
+        fi
+        drawn=0
+
+        # Is everything currently selected? Drives the "Select all" checkbox.
+        local all=1
+        for s in "${SELECTED[@]}"; do [[ "$s" -eq 1 ]] || { all=0; break; }; done
+
+        printf '\033[1;34m==>\033[0m \033[1mSelect skills to install\033[0m\033[K\n'
+        printf '\033[2m    ↑/↓ move · space toggle · a all · enter confirm · q quit\033[0m\033[K\n'
+        printf '\033[K\n'
+        drawn=$((drawn + 3))
+
+        # Row 0: Select all.
+        local mark
+        if [[ $all -eq 1 ]]; then mark="\033[0;32m◉\033[0m"; else mark="\033[2m◯\033[0m"; fi
+        if [[ $cursor -eq 0 ]]; then
+            printf '  %b \033[7m Select all \033[0m\033[K\n' "$mark"
+        else
+            printf '  %b Select all\033[K\n' "$mark"
+        fi
+        printf '\033[K\n'
+        drawn=$((drawn + 2))
+
+        local prev_cat="" cat name
+        for ((i = 0; i < n; i++)); do
+            cat="${LABELS[i]%%/*}"
+            name="${LABELS[i]#*/}"
+            if [[ "$cat" != "$prev_cat" ]]; then
+                # Section header per category.
+                printf '  \033[1;34m%s\033[0m\033[K\n' "$cat"
+                prev_cat="$cat"
+                drawn=$((drawn + 1))
+            fi
+            if [[ "${SELECTED[i]}" -eq 1 ]]; then mark="\033[0;32m◉\033[0m"; else mark="\033[2m◯\033[0m"; fi
+            if [[ $((i + 1)) -eq $cursor ]]; then
+                printf '    %b \033[7m %s \033[0m\033[K\n' "$mark" "$name"
+            else
+                printf '    %b %s\033[K\n' "$mark" "$name"
+            fi
+            drawn=$((drawn + 1))
+        done
+
+        # Detail pane for the focused row, wrapped and padded to detail_h lines.
+        local focus_desc
+        if [[ $cursor -eq 0 ]]; then
+            focus_desc="Select or deselect every skill at once."
+        else
+            focus_desc="${DESCS[cursor-1]}"
+        fi
+        printf '\033[K\n'
+        drawn=$((drawn + 1))
+        local d=0
+        while IFS= read -r dline; do
+            [[ $d -lt $detail_h ]] || break
+            printf '    \033[2m%s\033[0m\033[K\n' "$dline"
+            d=$((d + 1))
+        done < <(printf '%s\n' "$focus_desc" | fold -s -w "$width")
+        while [[ $d -lt $detail_h ]]; do printf '\033[K\n'; d=$((d + 1)); done
+        drawn=$((drawn + detail_h))
+
+        local count=0
+        for s in "${SELECTED[@]}"; do count=$((count + s)); done
+        printf '  \033[2m%d of %d selected\033[0m\033[K\n' "$count" "$n"
+        drawn=$((drawn + 1))
+
+        total=$drawn
+
+        IFS= read -rsn1 key || break
+        if [[ "$key" == $'\033' ]]; then
+            # Arrow keys arrive as a burst (ESC [ A/B), so the remaining two
+            # bytes are already buffered and read instantly. A lone ESC (abort)
+            # waits out the 1s timeout. Integer timeout for bash 3.2 (macOS).
+            read -rsn2 -t 1 rest || rest=""
+            key+="$rest"
+        fi
+
+        case "$key" in
+            $'\033[A'|k) cursor=$(( (cursor - 1 + rows) % rows )) ;;
+            $'\033[B'|j) cursor=$(( (cursor + 1) % rows )) ;;
+            ' '|a|A)
+                if [[ $cursor -eq 0 || "$key" == [aA] ]]; then
+                    # Toggle all: if every item is selected, clear; else select all.
+                    for ((i = 0; i < n; i++)); do SELECTED[i]=$((1 - all)); done
+                else
+                    SELECTED[cursor-1]=$((1 - SELECTED[cursor-1]))
+                fi
+                ;;
+            ''|$'\n') return 0 ;;            # enter confirms
+            q|Q|$'\033') return 130 ;;       # q or bare esc aborts
+        esac
+    done
+    return 0
+}
+
+if [[ $INSTALL_ALL -eq 0 && -t 0 && -t 1 ]]; then
+    if ! tui_select; then
+        echo "Aborted. Nothing was installed." >&2
+        exit 130
+    fi
+else
+    # --all, or non-interactive (piped/CI): install everything.
+    for ((i = 0; i < ${#DIRS[@]}; i++)); do SELECTED[i]=1; done
+fi
+
+step "Ensuring ~/.claude/ structure"
+mkdir -p "$TARGET_DIR/skills"
+ok "$TARGET_DIR"
+
+step "Installing skills"
+installed=0
+for ((i = 0; i < ${#DIRS[@]}; i++)); do
+    [[ "${SELECTED[i]}" -eq 1 ]] || { skip "${LABELS[i]} (not selected)"; continue; }
+    link_if_safe "${DIRS[i]}" "$TARGET_DIR/skills/${NAMES[i]}" "${LABELS[i]}"
+    installed=$((installed + 1))
+done
+
+if [[ $installed -eq 0 ]]; then
+    skip "No skills selected — nothing to install."
 fi
 
 step "Done."

@@ -14,6 +14,47 @@ From the root of this repo:
 ./install.sh
 ```
 
+When run in a terminal, the script opens an **interactive selector** so you can choose exactly which skills to install. Nothing is selected by default — toggle the **Select all** row at the top to grab everything, or use `space` to pick individual skills:
+
+```
+==> Select skills to install
+    ↑/↓ move · space toggle · a all · enter confirm · q quit
+
+  ◯ Select all
+
+  engineer
+    ◯ code-standards
+    ◉ commit
+    ...
+  productivity
+    ◉ diagnose
+    ◯ handoff
+    ...
+
+    Split a dirty working tree into an ordered list of atomic
+    conventional commits, then commit them only on an explicit OK.
+
+  2 of 18 selected
+```
+
+The line under the list shows the **description of the highlighted skill** (taken from its `SKILL.md`), so you can tell what each one does before choosing.
+
+| Key            | Action                          |
+| -------------- | ------------------------------- |
+| `↑`/`↓` or `k`/`j` | Move the cursor             |
+| `space`        | Toggle the row under the cursor (incl. **Select all**) |
+| `a`            | Shortcut to toggle all on/off   |
+| `enter`        | Install the selected skills     |
+| `q` / `esc`    | Abort without installing anything |
+
+To install everything without prompting (e.g. in a pipe or CI), pass `--all`:
+
+```bash
+./install.sh --all
+```
+
+If stdin is not a terminal, `--all` is assumed automatically.
+
 The script is **non-destructive and idempotent**:
 
 | Situation                                            | Behavior                                                          |
