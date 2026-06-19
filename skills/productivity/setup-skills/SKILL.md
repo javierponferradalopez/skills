@@ -1,14 +1,14 @@
 ---
 name: setup-skills
-description: Sets up an `## Agent skills` block in AGENTS.md/CLAUDE.md and `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub, local markdown, or ClickUp) and domain doc layout. if those skills appear to be missing context about the issue tracker or domain docs.
+description: Sets up an `## Agent skills` block in AGENTS.md/CLAUDE.md and `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub, GitLab, ClickUp, or local markdown) and domain doc layout. Run as a first-time bootstrap for a repo, or if engineering skills appear to be missing context about the issue tracker or domain docs.
 disable-model-invocation: true
 ---
 
-# Setup Matt Pocock's Skills
+# Setup Skills
 
 Scaffold the per-repo configuration that the engineering skills assume:
 
-- **Issue tracker** — where issues live (GitHub by default; local markdown and ClickUp are also supported out of the box)
+- **Issue tracker** — where issues live (GitHub by default; GitLab, ClickUp, and local markdown are also supported out of the box)
 - **Domain docs** — where `CONTEXT.md` and ADRs live, and the consumer rules for reading them
 
 This is a prompt-driven skill, not a deterministic script. Explore, present what you found, confirm with the user, then write.
@@ -21,40 +21,44 @@ Look at the current repo to understand its starting state. Read whatever exists;
 
 - `git remote -v` and `.git/config` — is this a GitHub repo? Which one?
 - `AGENTS.md` and `CLAUDE.md` at the repo root — does either exist? Is there already an `## Agent skills` section in either?
-- `docs/CONTEXT.md`
-- `docs/adr/`
+- `CONTEXT.md` and `CONTEXT-MAP.md` at the repo root
+- `docs/adr/` and any `src/*/docs/adr/` directories
 - `docs/agents/` — does this skill's prior output already exist?
 - `.kanban/` — sign that a local-markdown issue tracker convention is already in use
 
 ### 2. Present findings and ask
 
-Summarise what's present and what's missing. Then walk the user through the two decisions **one at a time** — present a section, get the user's answer, then move to the next. Don't dump them all at once.
+Summarise what's present and what's missing. Then walk the user through the two decisions **one at a time** — present a section, get the user's answer, then move to the next. Don't dump both at once.
 
-Assume the user does not know what these terms mean. Each section starts with a short explainer (what it is, why these skills need it, what changes if they pick differently). Then show the choices and the default.
+Assume the user does not know what these terms mean. Each section starts with a short explainer (what it is, why the engineering skills need it, what changes if they pick differently). Then show the choices and the default.
 
 **Section A — Issue tracker.**
 
-> Explainer: The "issue tracker" is where issues live for this repo. Skills like `to-issues`, `to-prd`, and `qa` read from and write to it — they need to know whether to call `gh issue create`, write a markdown file under `.kanban/`, or follow some other workflow you describe. Pick the place you actually track work for this repo.
+> Explainer: The "issue tracker" is where issues live for this repo. Engineering skills that create, read, or update issues need to know whether to call `gh issue create`, write a markdown file under `.kanban/`, or follow some other workflow you describe. Pick the place you actually track work for this repo.
 
-Default posture: these skills were designed for GitHub. If a `git remote` points at GitHub, propose that. Otherwise (or if the user prefers), offer:
+Default posture: these skills were designed for GitHub. If a `git remote` points at GitHub, propose that. If a `git remote` points at GitLab (`gitlab.com` or a self-hosted host), propose GitLab. Otherwise (or if the user prefers), offer:
 
 - **GitHub** — issues live in the repo's GitHub Issues (uses the `gh` CLI)
+- **GitLab** — issues live in the repo's GitLab Issues (uses the [`glab`](https://gitlab.com/gitlab-org/cli) CLI)
+- **ClickUp** — issues live as ClickUp tasks (uses the ClickUp MCP tools)
 - **Local markdown** — issues live as files under `.kanban/<feature>/` in this repo (good for solo projects or repos without a remote)
-- **ClickUp** — issues live as ClickUp tasks in a three-level hierarchy (product epic → tech task holding the PRD → nested issue subtasks), driven through the ClickUp MCP server
 - **Other** (Jira, Linear, etc.) — ask the user to describe the workflow in one paragraph; the skill will record it as freeform prose
 
 **Section B — Domain docs.**
 
-> Explainer: Some skills read a `CONTEXT.md` file to learn the project's domain language, and `docs/adr/` for past architectural decisions. They live under `docs/` so the skills know where to look.
+> Explainer: Some engineering skills read a `CONTEXT.md` file to learn the project's domain language, and `docs/adr/` for past architectural decisions. They need to know whether the repo has one global context or multiple (e.g. a monorepo with separate frontend/backend contexts) so they look in the right place.
 
-The layout is fixed: one `docs/CONTEXT.md` glossary plus `docs/adr/` for architectural decisions.
+Confirm the layout:
+
+- **Single-context** — one `CONTEXT.md` + `docs/adr/` at the repo root. Most repos are this.
+- **Multi-context** — `CONTEXT-MAP.md` at the root pointing to per-context `CONTEXT.md` files (typically a monorepo).
 
 ### 3. Confirm and edit
 
 Show the user a draft of:
 
 - The `## Agent skills` block to add to whichever of `CLAUDE.md` / `AGENTS.md` is being edited (see step 4 for selection rules)
-- The contents of `docs/agents/issue-tracker.md`, `docs/agents/domain.md`
+- The contents of `docs/agents/issue-tracker.md` and `docs/agents/domain.md`
 
 Let them edit before writing.
 
@@ -81,18 +85,19 @@ The block:
 
 ### Domain docs
 
-Domain glossary at `docs/CONTEXT.md` + ADRs at `docs/adr/`. See `docs/agents/domain.md`.
+[one-line summary of layout — "single-context" or "multi-context"]. See `docs/agents/domain.md`.
 ```
 
-Then write the three docs files using the seed templates in this skill folder as a starting point:
+Then write the docs files using the seed templates in this skill folder as a starting point:
 
 - [issue-tracker-github.md](./issue-tracker-github.md) — GitHub issue tracker
+- [issue-tracker-gitlab.md](./issue-tracker-gitlab.md) — GitLab issue tracker
+- [issue-tracker-clickup.md](./issue-tracker-clickup.md) — ClickUp issue tracker
 - [issue-tracker-local.md](./issue-tracker-local.md) — local-markdown issue tracker
-- [issue-tracker-clickup.md](./issue-tracker-clickup.md) — ClickUp issue tracker (epic → tech task → nested issues)
 - [domain.md](./domain.md) — domain doc consumer rules + layout
 
-For "other" issue trackers, write `docs/agents/issue-tracker.md` from kanban using the user's description.
+For "other" issue trackers, write `docs/agents/issue-tracker.md` from scratch using the user's description.
 
 ### 5. Done
 
-Tell the user the setup is complete and which engineering skills will now read from these files. Mention they can edit `docs/agents/*.md` directly later — re-running this skill is only necessary if they want to switch issue trackers or restart from kanban.
+Tell the user the setup is complete. Mention they can edit `docs/agents/*.md` directly later — re-running this skill is only necessary if they want to switch issue trackers or restart from scratch.
