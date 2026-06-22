@@ -1,0 +1,72 @@
+{
+  "upstream": "https://github.com/mattpocock/skills.git",
+  "_comment": "Provenance of the skills forked from matt. 'base' = the upstream/main commit your copy is synced from. 'mode': pure = take matt verbatim; modified = 3-way merge preserving your changes. Managed by bin/skills-upstream.",
+  "skills": {
+    "grill-me": {
+      "mine": "skills/engineer/grill-me",
+      "source": "skills/productivity/grill-me",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "tdd": {
+      "mine": "skills/engineer/tdd",
+      "source": "skills/engineering/tdd",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "handoff": {
+      "mine": "skills/productivity/handoff",
+      "source": "skills/productivity/handoff",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "to-prd": {
+      "mine": "skills/engineer/to-prd",
+      "source": "skills/engineering/to-prd",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "to-issues": {
+      "mine": "skills/engineer/to-issues",
+      "source": "skills/engineering/to-issues",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "grill-with-docs": {
+      "mine": "skills/engineer/grill-with-docs",
+      "source": "skills/engineering/grill-with-docs",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "teach": {
+      "mine": "skills/productivity/teach",
+      "source": "skills/productivity/teach",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "improve-codebase-architecture": {
+      "mine": "skills/productivity/improve-codebase-architecture",
+      "source": "skills/engineering/improve-codebase-architecture",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "setup-skills": {
+      "mine": "skills/productivity/setup-skills",
+      "source": "skills/engineering/setup-matt-pocock-skills",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "diagnose": {
+      "mine": "skills/productivity/diagnose",
+      "source": "skills/engineering/diagnosing-bugs",
+      "base": "6eeb81b",
+      "mode": "modified"
+    },
+    "write-a-skill": {
+      "mine": "skills/productivity/write-a-skill",
+      "source": "skills/productivity/writing-great-skills",
+      "base": "6eeb81b",
+      "mode": "modified"
+    }
+  }
+}

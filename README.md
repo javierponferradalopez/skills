@@ -8,6 +8,8 @@ The harness lives in `~/.claude/`. Skills run entirely in the conversation and w
 
 ## Installation
 
+> Just want the skills as they are today? This section is all you need. If you later want to pull Matt Pocock's newest changes into the skills forked from him, see [Maintenance](#maintenance--syncing-with-upstream).
+
 From the root of this repo:
 
 ```bash
@@ -74,6 +76,114 @@ The script doesn't ship an uninstaller. To remove the harness:
 # Remove the harness symlinks; your real files and other skills stay.
 find ~/.claude -maxdepth 2 -type l -lname "*/skills/*" -delete
 ```
+
+---
+
+## Maintenance — syncing with upstream
+
+Many skills here are **forked from [Matt Pocock's skills](https://github.com/mattpocock/skills)**, but this is not a git fork: the two repos share no common history, and upstream renames and moves skills freely. So a plain `git merge` is not an option. Instead, provenance is tracked **per skill** in [`upstream.lock.json`](./upstream.lock.json), and a small tool brings over only the changes you want — without clobbering your local edits.
+
+You only need this section if you want to keep your forked skills up to date with upstream. Skills you authored yourself (`implement`, `validate`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`) are **not** tracked and are never touched.
+
+### How provenance is recorded
+
+`upstream.lock.json` holds one entry per tracked fork:
+
+```jsonc
+"teach": {
+  "mine":   "skills/productivity/teach",        // your copy
+  "source": "skills/productivity/teach",        // the equivalent path in Matt's repo (may be renamed/moved)
+  "base":   "6eeb81b",                          // the upstream commit you are synced from
+  "mode":   "modified"                          // "modified" = 3-way merge · "pure" = take upstream verbatim
+}
+```
+
+The `base` commit is what makes selective updates possible: it lets the tool compute *exactly* what Matt changed since your last sync and three-way-merge only that delta into your copy — even when the paths differ. `mode` decides how an update is applied:
+
+- **`modified`** — your copy has intentional local changes (e.g. translations, tweaks). Updates are a **3-way merge** that preserves your edits and only flags real conflicts.
+- **`pure`** — you track Matt's version verbatim. Updates **overwrite** your copy with upstream.
+
+### One-time setup (fresh clones)
+
+The tool compares against the `upstream` remote. If you cloned this repo, add it once:
+
+```bash
+git remote add upstream https://github.com/mattpocock/skills.git
+git fetch upstream
+```
+
+### The tool: `bin/skills-upstream`
+
+It runs only in this authoring repo (it needs `jq` and the git history); it never ships to `~/.claude`.
+
+| Command                       | What it does                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| `bin/skills-upstream status`  | For each tracked fork, shows whether Matt changed it since your `base`.       |
+| `bin/skills-upstream list`    | Dumps the manifest (source path, base, mode per skill).                       |
+| `bin/skills-upstream diff <skill>`   | Shows Matt's changes for that fork (`base..upstream/main`).            |
+| `bin/skills-upstream update <skill>` | Applies Matt's changes to your copy (3-way merge, or overwrite if `pure`). |
+| `bin/skills-upstream pin <skill>`    | Records the current upstream as the new `base`, once you're happy.    |
+| `bin/skills-upstream add <source> [mine] [mode]` | Adopts a **new** skill from Matt and registers it in the manifest. |
+
+### Adopting a brand-new skill from Matt
+
+When Matt ships a skill you don't have yet, `add` copies it into your structure and starts tracking it — no manual copy/paste:
+
+```bash
+git fetch upstream
+bin/skills-upstream add skills/engineering/prototype          # -> skills/productivity/prototype, mode "pure"
+bin/skills-upstream add skills/engineering/prototype skills/engineer/prototype modified
+```
+
+- `<source>` is the path **in Matt's repo** (find it with `git ls-tree -r --name-only upstream/main | grep <name>`).
+- `[mine]` is where it lands in *your* tree (default `skills/productivity/<name>`). Pick any category folder — the installer flattens it to `~/.claude/skills/<name>/` anyway.
+- `[mode]` defaults to `pure` (track Matt verbatim). If you plan to customize it, pass `modified`, or flip its `mode` in the manifest once you start editing — otherwise the next `update` will overwrite your changes.
+
+It copies **all** of the skill's files (e.g. `SKILL.md` plus any `UI.md`, `GLOSSARY.md`, `scripts/`), pins `base` to the current upstream, and refuses to clobber an existing skill or name collision. The new skill's invocation name comes from its `SKILL.md` frontmatter `name:`, exactly as Matt wrote it.
+
+### Common scenarios
+
+Every flow starts the same way — pull Matt's latest and see what moved:
+
+```bash
+git fetch upstream && bin/skills-upstream status
+```
+
+**1. Pull Matt's changes into one forked skill** — the everyday case:
+
+```bash
+bin/skills-upstream diff teach          # review what Matt changed
+bin/skills-upstream update teach        # 3-way merge into your copy
+# resolve any conflict markers (<<<<<<<), then test the skill
+bin/skills-upstream pin teach           # lock in the new base
+```
+
+**2. Catch up several skills at once** — `status` listed more than one:
+
+```bash
+for s in tdd to-prd handoff; do bin/skills-upstream update "$s"; done
+# review/resolve each, then pin the ones you're happy with
+for s in tdd to-prd handoff; do bin/skills-upstream pin "$s"; done
+```
+
+**3. Adopt a brand-new skill Matt just shipped:**
+
+```bash
+git ls-tree -r --name-only upstream/main | grep prototype   # find its path
+bin/skills-upstream add skills/engineering/prototype        # copy + register (mode pure)
+```
+
+**4. You've started customizing a `pure` skill** — stop future overwrites by switching its mode to `modified` in `upstream.lock.json`, so the next `update` does a 3-way merge instead:
+
+```jsonc
+"prototype": { ..., "mode": "modified" }
+```
+
+**5. Matt renamed or deleted a skill** — `status` flags it as `GONE from matt`. Decide per skill: drop tracking (delete its entry from `upstream.lock.json`, keep your copy as your own), or repoint `source` to its new path if he just moved it.
+
+**6. "Did I miss anything?"** — `bin/skills-upstream status` is the single source of truth: green means your copy is synced to its `base`, yellow means Matt moved on since then.
+
+`update` only touches the one skill you name, so you upgrade exactly what you want and leave the rest frozen. On a `modified` skill, expect conflicts where your local edits overlap Matt's — that's the safety net working; resolve them by hand. Heavily diverged skills (`grill-me`, `teach`, `grill-with-docs`, `improve-codebase-architecture`) will conflict more often; near-identical ones (`tdd`, `handoff`, `to-prd`, `to-issues`) usually merge clean.
 
 ---
 

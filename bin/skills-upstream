@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+#
+# skills-upstream — selectively sync the skills forked from matt.
+#
+# Provenance lives in upstream.lock.json (repo root). For each fork it stores:
+#   mine    path to YOUR copy           (skills/<category>/<name>)
+#   source  equivalent path in matt     (may be renamed/moved)
+#   base    upstream commit you are synced from
+#   mode    "modified" (3-way merge) | "pure" (take matt verbatim)
+#
+# Commands:
+#   status            which forks did matt touch since their base?
+#   diff <skill>      show matt's change (base..upstream) for that fork
+#   update <skill>    apply matt's changes to your copy (3-way merge)
+#   pin <skill>       set base = current upstream after reviewing/merging
+#   add <source> [mine] [mode]   adopt a NEW skill from matt and register it
+#   list              dump the manifest
+#
+# The 3-way merge works off git blobs, so it works even when matt's path is
+# renamed relative to yours. Runs only in the authoring repo.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST="$REPO/upstream.lock.json"
+UPSTREAM_REF="${SKILLS_UPSTREAM_REF:-upstream/main}"
+
+command -v jq >/dev/null || { echo "jq is missing." >&2; exit 1; }
+[[ -f "$MANIFEST" ]] || { echo "Can't find $MANIFEST" >&2; exit 1; }
+
+c_red=$'\033[31m'; c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_bld=$'\033[1m'; c_off=$'\033[0m'
+
+# --- manifest helpers -------------------------------------------------------
+mf()        { jq -r "$1" "$MANIFEST"; }
+skill_keys(){ mf '.skills | keys[]'; }
+field()     { jq -r --arg k "$1" ".skills[\$k].$2" "$MANIFEST"; }
+exists()    { jq -r --arg k "$1" '.skills | has($k)' "$MANIFEST" | grep -qx true; }
+
+# does <ref>:<path> exist?
+blob_exists(){ git cat-file -e "$1:$2" 2>/dev/null; }
+# recursive file list of a dir at a ref, as paths relative to the dir
+files_at(){ # <ref> <dir>
+  git ls-tree -r --name-only "$1" -- "$2" 2>/dev/null | sed "s#^$2/##"
+}
+
+require_skill(){
+  exists "$1" || { echo "${c_red}Not tracking skill '$1'.${c_off} See 'skills-upstream list'." >&2; exit 1; }
+}
+
+# any matt changes for this fork between its base and upstream?
+has_upstream_changes(){ # <base> <source>
+  ! git diff --quiet "$1" "$UPSTREAM_REF" -- "$2" 2>/dev/null
+}
+
+cmd_list(){
+  printf "%-32s %-42s %-9s %s\n" "SKILL" "SOURCE (matt)" "BASE" "MODE"
+  for k in $(skill_keys); do
+    printf "%-32s %-42s %-9s %s\n" "$k" "$(field "$k" source)" "$(field "$k" base)" "$(field "$k" mode)"
+  done
+}
+
+cmd_status(){
+  echo "${c_dim}Comparing against $UPSTREAM_REF (run 'git fetch upstream' first).${c_off}"
+  local up_head; up_head="$(git rev-parse --short "$UPSTREAM_REF")"
+  echo "${c_dim}$UPSTREAM_REF is at $up_head.${c_off}"
+  echo
+  local changed=0
+  for k in $(skill_keys); do
+    local base source mode
+    base="$(field "$k" base)"; source="$(field "$k" source)"; mode="$(field "$k" mode)"
+    if ! blob_exists "$UPSTREAM_REF" "$source/SKILL.md"; then
+      printf "  %s%-32s%s %sGONE from matt (renamed?)%s\n" "$c_yel" "$k" "$c_off" "$c_yel" "$c_off"
+      continue
+    fi
+    if has_upstream_changes "$base" "$source"; then
+      local n; n="$(git diff --numstat "$base" "$UPSTREAM_REF" -- "$source" | awk '{a+=$1;d+=$2} END{print a"+/"d"-"}')"
+      printf "  %s%-32s%s matt changes (%s)  %s[%s]%s\n" "$c_yel" "$k" "$c_off" "$n" "$c_dim" "$mode" "$c_off"
+      changed=$((changed+1))
+    else
+      printf "  %s%-32s%s up to date%s\n" "$c_grn" "$k" "$c_off" "$c_off"
+    fi
+  done
+  echo
+  if [[ $changed -eq 0 ]]; then
+    echo "${c_grn}Everything up to date with matt.${c_off}"
+  else
+    echo "$changed fork(s) with changes. Review with 'diff <skill>', apply with 'update <skill>', lock in with 'pin <skill>'."
+  fi
+}
+
+cmd_diff(){
+  require_skill "$1"
+  local base source; base="$(field "$1" base)"; source="$(field "$1" source)"
+  blob_exists "$UPSTREAM_REF" "$source/SKILL.md" || { echo "${c_yel}'$source' no longer exists in $UPSTREAM_REF.${c_off}"; exit 0; }
+  git --no-pager diff "$base" "$UPSTREAM_REF" -- "$source"
+}
+
+cmd_update(){
+  require_skill "$1"
+  local base source mine mode
+  base="$(field "$1" base)"; source="$(field "$1" source)"; mine="$REPO/$(field "$1" mine)"; mode="$(field "$1" mode)"
+
+  if ! blob_exists "$UPSTREAM_REF" "$source/SKILL.md"; then
+    echo "${c_yel}'$source' no longer exists in $UPSTREAM_REF — matt deleted/renamed it. Resolve by hand.${c_off}"; exit 1
+  fi
+  if ! has_upstream_changes "$base" "$source"; then
+    echo "${c_grn}'$1' is already up to date; nothing to apply.${c_off}"; exit 0
+  fi
+
+  # union of files in base and in upstream (paths relative to the source dir)
+  local rels; rels="$( { files_at "$base" "$source"; files_at "$UPSTREAM_REF" "$source"; } | sort -u )"
+  local conflicts=0 touched=0
+  local tmpb tmpt
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    local in_base=0 in_theirs=0
+    blob_exists "$base"         "$source/$rel" && in_base=1
+    blob_exists "$UPSTREAM_REF" "$source/$rel" && in_theirs=1
+
+    # matt deleted the file: warn, don't touch
+    if [[ $in_base -eq 1 && $in_theirs -eq 0 ]]; then
+      echo "  ${c_yel}matt deleted '$rel' — leaving it intact in your copy, delete it yourself if you want.${c_off}"
+      continue
+    fi
+
+    local dest="$mine/$rel"
+    mkdir -p "$(dirname "$dest")"
+    tmpb="$(mktemp)"; tmpt="$(mktemp)"
+    [[ $in_base -eq 1 ]] && git show "$base:$source/$rel" > "$tmpb" || : > "$tmpb"
+    git show "$UPSTREAM_REF:$source/$rel" > "$tmpt"
+
+    if [[ ! -f "$dest" ]]; then
+      # doesn't exist in your copy: bring it from matt verbatim
+      cp "$tmpt" "$dest"; echo "  ${c_grn}+ $rel${c_off} (new from matt)"; touched=$((touched+1))
+      rm -f "$tmpb" "$tmpt"; continue
+    fi
+
+    if [[ "$mode" == "pure" ]]; then
+      cp "$tmpt" "$dest"; echo "  ${c_grn}~ $rel${c_off} (pure: overwritten with matt)"; touched=$((touched+1))
+      rm -f "$tmpb" "$tmpt"; continue
+    fi
+
+    # modified: 3-way merge onto your file
+    if git merge-file -L "yours" -L "base(matt $base)" -L "matt($UPSTREAM_REF)" "$dest" "$tmpb" "$tmpt"; then
+      echo "  ${c_grn}~ $rel${c_off} (clean merge)"
+    else
+      echo "  ${c_red}! $rel — CONFLICT, resolve it by hand (look for <<<<<<<).${c_off}"
+      conflicts=$((conflicts+1))
+    fi
+    touched=$((touched+1))
+    rm -f "$tmpb" "$tmpt"
+  done <<< "$rels"
+
+  echo
+  if [[ $conflicts -gt 0 ]]; then
+    echo "${c_red}$conflicts file(s) with conflicts.${c_off} Resolve them, test the skill, then: skills-upstream pin $1"
+  elif [[ $touched -gt 0 ]]; then
+    echo "${c_grn}Merge applied to '$1'.${c_off} Review the result, then: skills-upstream pin $1"
+  fi
+}
+
+cmd_add(){
+  # add <source-in-matt> [mine] [mode]
+  local source="$1"
+  local name; name="$(basename "$source")"
+  local mine="${2:-skills/productivity/$name}"
+  local mode="${3:-pure}"
+
+  [[ "$mode" == "pure" || "$mode" == "modified" ]] || { echo "${c_red}mode must be 'pure' or 'modified'.${c_off}" >&2; exit 1; }
+
+  # 1) the skill exists in matt
+  blob_exists "$UPSTREAM_REF" "$source/SKILL.md" || {
+    echo "${c_red}Can't find '$source/SKILL.md' in $UPSTREAM_REF.${c_off} Run 'git fetch upstream' and check the path." >&2; exit 1; }
+
+  # 2) name not already registered
+  exists "$name" && { echo "${c_red}Already tracking a skill named '$name'. Use 'update $name'.${c_off}" >&2; exit 1; }
+
+  # 3) the name (folder) must be unique: install.sh flattens by name
+  local clash; clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d -name "$name" | head -1)"
+  [[ -n "$clash" ]] && { echo "${c_red}A skill folder '$name' already exists at ${clash#$REPO/}.${c_off} Pick another name with the 2nd argument." >&2; exit 1; }
+
+  # 4) destination must not exist
+  [[ -e "$REPO/$mine" ]] && { echo "${c_red}'$mine' already exists.${c_off} Not overwriting anything." >&2; exit 1; }
+
+  # 5) copy all of matt's files into your structure
+  mkdir -p "$REPO/$mine"
+  local rels; rels="$(files_at "$UPSTREAM_REF" "$source")"
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    mkdir -p "$REPO/$mine/$(dirname "$rel")"
+    git show "$UPSTREAM_REF:$source/$rel" > "$REPO/$mine/$rel"
+    echo "  ${c_grn}+ $mine/$rel${c_off}"
+  done <<< "$rels"
+
+  # 6) register in the manifest, base = current upstream
+  local newbase; newbase="$(git rev-parse --short "$UPSTREAM_REF")"
+  local tmp; tmp="$(mktemp)"
+  jq --arg k "$name" --arg mine "$mine" --arg src "$source" --arg b "$newbase" --arg m "$mode" \
+     '.skills[$k] = {mine:$mine, source:$src, base:$b, mode:$m}' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+
+  echo
+  echo "${c_grn}Adopted '$name' from '$source' (base $newbase, mode $mode).${c_off}"
+  echo "Review its frontmatter ('name:' will be matt's; that's the name you'll invoke it with)."
+  [[ "$mode" == "pure" ]] && echo "${c_dim}If you modify it, switch its mode to 'modified' in upstream.lock.json so you don't lose your changes on the next update.${c_off}"
+}
+
+cmd_pin(){
+  require_skill "$1"
+  local newbase; newbase="$(git rev-parse --short "$UPSTREAM_REF")"
+  local tmp; tmp="$(mktemp)"
+  jq --arg k "$1" --arg b "$newbase" '.skills[$k].base = $b' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  echo "${c_grn}'$1' pinned to base $newbase.${c_off}"
+}
+
+usage(){ sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+case "${1:-}" in
+  status) cmd_status ;;
+  list)   cmd_list ;;
+  diff)   shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream diff <skill>" >&2; exit 1; }; cmd_diff "$1" ;;
+  update) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream update <skill>" >&2; exit 1; }; cmd_update "$1" ;;
+  pin)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream pin <skill>" >&2; exit 1; }; cmd_pin "$1" ;;
+  add)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream add <source-in-matt> [mine] [pure|modified]" >&2; exit 1; }; cmd_add "$@" ;;
+  ""|-h|--help|help) usage ;;
+  *) echo "Unknown command: $1" >&2; usage; exit 1 ;;
+esac
