@@ -1,61 +1,48 @@
 # Issue tracker: ClickUp
 
-This repo's PRDs and issues live as ClickUp tasks. Every operation goes through
-the **ClickUp MCP server**, discovering the tools on-demand with ToolSearch.
+Issues and PRDs for this repo live as ClickUp tasks, used as a three-level hierarchy.
+
+Operations go through the **ClickUp MCP server** (`mcp__claude_ai_ClickUp__*`). The exact tool set is discovered on demand: run `ToolSearch` with a query like `clickup task` to load the schemas, authenticate first if prompted, then call the tools. For headless/cron runs where the MCP server is unavailable, fall back to the ClickUp REST API with a `CLICKUP_API_TOKEN`.
 
 ## Hierarchy
 
+Three levels, relying on ClickUp **nested subtasks**:
+
 ```
-(Epic task — optional)
-└── PRD (task)
-    └── Issues (subtasks of the PRD)
+Product epic (Task)          ← created by product. Requirements + acceptance criteria. We only READ it.
+└─ Tech task (subtask)       ← the PRD. Created/filled by `to-prd`.
+   └─ Issues (nested subtasks) ← tracer-bullet slices. Created by `to-issues`.
 ```
 
-- The fixed relationship is **PRD → Issues**: issues always hang as subtasks of
-  the PRD.
-- Above the PRD there may optionally be an epic task. It is not required.
-- **Every creation starts from a reference the user gives you.** Never create a
-  top-level task on your own.
-- Since everything hangs off an existing task, its location (List / Space /
-  Folder) is inherited. There is nothing to configure for that.
+The skills **never create top-level tasks** — the tech task always hangs off a product epic, and issues always hang off the tech task. Everything inherits the parent's List, so no List/Space/Folder needs configuring here.
 
-## Task references
+## Referencing a ticket
 
-The user may reference tasks in three formats:
+The user passes either a full task **URL** (`app.clickup.com/t/<id>`) or a **custom ID** (`GEN-142`). Normalise it:
 
-- **URL** (`app.clickup.com/t/<id>`) → extract the `<id>`.
-- **Custom ID** (e.g. `PD-615`) → use it as-is.
-- **Internal ID** → use it as-is.
+- URL → extract the `<id>` segment.
+- `LETTERS-number` → resolve the custom ID to the internal task ID via the API/MCP.
+- Otherwise → treat it as an internal task ID.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a ClickUp task **following the reference the user gives you**:
+- **`to-prd`** — the PRD lives in the **description** of the tech task.
+  - If the reference is a **product epic**, create a new subtask (the tech task) under it and write the PRD into its description.
+  - If the reference is already a **tech task**, write the PRD into its description (create nothing).
+  - Content convention: start with a link to the parent product epic plus 1–2 sentences of context. **Do not recopy** requirements or acceptance criteria — the product epic is their source of truth and they must not diverge. The bulk of the tech PRD is implementation/testing decisions and technical references for the nested issues.
+  - Adapting `to-prd`'s template here: `Problem Statement`, `Solution` and `User Stories` are owned by the product epic — **replace them with the link + 1–2 sentence summary** rather than reproducing them. Keep `Implementation Decisions`, `Testing Decisions`, `Out of Scope` and `Further Notes` in full; that is the value the tech task adds on top of the epic.
+- **`to-issues`** — create the slices as **nested subtasks** under the tech task, in dependency order. For each "Blocked by" relationship, also create the **native ClickUp dependency** (blocking / waiting on) using the real task IDs, in addition to mentioning it in the issue text.
 
-- If the reference is an **existing epic task** → create the PRD as a subtask of
-  it.
-- If the reference is a **placeholder task that is already the epic** → write
-  the PRD directly into that task's description (don't create anything new) and
-  **also update the title** of that task.
+Record decisions and conversation history as **native task comments**, not by editing the description (the description is reserved for the PRD / issue body).
 
-The PRD body and the issue bodies go in the task **description**.
+Do not set status, tags, custom fields, assignees or priority — leave the List defaults. (If a workspace needs specific metadata, add those rules here.)
 
 ## When a skill says "fetch the relevant ticket"
 
-Always fetch the task's **description + comments**.
+Resolve the reference, then read **one level up + one level down**:
 
-Context scope:
-- **One level up** (only if a parent exists).
-- **One level down**, listing the child tasks.
-- No recursion.
+- Reference is a **tech task** → read its description + comments, read its parent **product epic** (requirements + acceptance criteria) for context, and list its existing issue subtasks.
+- Reference is a **product epic** → read its requirements + acceptance criteria and list the tech tasks under it.
+- Reference is an **issue** (subtask) → read its body + comments and read its parent **tech task** for context.
 
-## Creating issues
-
-- Create them **in dependency order**.
-- For each blocking relationship, also create the **native ClickUp dependency**
-  (blocking / waiting on) with the real IDs — not just by mentioning it in the
-  issue text.
-
-## Metadata
-
-Don't set status, tags, priority, assignees, or custom fields. Leave the List's
-default values when creating/editing tasks.
+Do not pull the whole branch recursively — one level up and one level down is enough.
