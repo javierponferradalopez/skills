@@ -30,13 +30,13 @@ When run in a terminal, the script opens an **interactive selector** so you can 
     ...
   productivity
     ◉ diagnose
-    ◯ handoff
+    ◯ domain-modeling
     ...
 
     Split a dirty working tree into an ordered list of atomic
     conventional commits, then commit them only on an explicit OK.
 
-  2 of 18 selected
+  2 of 20 selected
 ```
 
 The line under the list shows the **description of the highlighted skill** (taken from its `SKILL.md`), so you can tell what each one does before choosing.
@@ -201,14 +201,14 @@ The agent in the conversation (with the user) decides which skill to invoke next
 
 > In this repo skills are organized into category folders for browsing — `skills/<category>/<name>/`. Claude Code requires a flat layout, so the installer flattens the categories away and links each skill into `~/.claude/skills/<name>/`. Categories are an authoring convenience only; names are **intent-based** and stay unique across categories, with no category prefixes.
 
-Skills fall into two categories: **engineer** — the disciplined inner loop from a vague task to committed code (align → plan → build → commit) — and **productivity** — everything around that loop: diagnosis, architecture, code navigation, PR workflow, harness tooling, and learning.
+Skills fall into two categories: **engineer** — the disciplined inner loop from a vague task to committed code (align → plan → build → commit), plus the handoff skills that pause and resume that loop — and **productivity** — everything around that loop: diagnosis, domain modeling, architecture, code navigation, PR workflow, harness tooling, and learning.
 
 ### Engineer
 
 | Skill                                              | Use when                                                                                                                                  |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | [`grill-me`](./skills/engineer/grill-me/SKILL.md)           | Interrogating an idea until every ambiguity is resolved — walking down each branch of the design tree, one question at a time.            |
-| [`grill-with-docs`](./skills/engineer/grill-with-docs/SKILL.md) | Stress-testing a plan against the project's documented domain — sharpens terminology and updates `CONTEXT.md`/ADRs inline as decisions crystallise. |
+| [`grill-with-docs`](./skills/engineer/grill-me-with-docs/SKILL.md) | Running a `grill-me` session that also drives `domain-modeling` — so the interrogation simultaneously sharpens terminology and writes the glossary/ADRs down as decisions crystallise. |
 | [`to-prd`](./skills/engineer/to-prd/SKILL.md)               | Turning the current conversation into a PRD and publishing it to the project issue tracker — synthesises what's known, no interview.       |
 | [`to-issues`](./skills/engineer/to-issues/SKILL.md)         | Breaking a plan, spec, or PRD into independently-grabbable issues on the tracker using tracer-bullet vertical slices.                      |
 | [`tdd`](./skills/engineer/tdd/SKILL.md)                     | Building a feature or fixing a bug test-first — a disciplined red-green-refactor loop in vertical slices, with behavior-driven integration tests. |
@@ -216,6 +216,9 @@ Skills fall into two categories: **engineer** — the disciplined inner loop fro
 | [`validate`](./skills/engineer/validate/SKILL.md)           | Reviewing one issue's uncommitted implementation pre-commit in a fresh session — fixes bugs/edge-cases/quality in place, writes tests to break the code, flags spec gaps and scope creep; leaves the tree green, never commits. |
 | [`code-standards`](./skills/engineer/code-standards/SKILL.md) | Writing or reviewing code in any language against a thin quality bar focused on what models get wrong by default — deep modules, errors designed out of existence, behavior-driven tests, restraint.   |
 | [`commit`](./skills/engineer/commit/SKILL.md)               | Splitting a dirty working tree into an ordered list of atomic conventional commits — plans from `git diff HEAD`, commits only on an explicit literal OK. |
+| [`handoff`](./skills/engineer/handoff/SKILL.md)             | Compacting the current conversation into a handoff document (saved to the OS temp dir) so a fresh agent can continue the work — references existing artifacts rather than duplicating them. |
+| [`handoff-grill`](./skills/engineer/handoff-grill/SKILL.md) | Pausing a `grill-me` session into a resumable handoff that preserves the open branches of the decision tree, not just the closed decisions — to continue later or hand to a teammate. |
+| [`domain-modeling`](./skills/productivity/domain-modeling/SKILL.md) | Actively building and sharpening the project's domain model — challenging terms and writing the glossary (`CONTEXT.md`) and decisions (ADRs) down the moment they crystallise. |
 
 ### Productivity
 
@@ -228,8 +231,6 @@ Skills fall into two categories: **engineer** — the disciplined inner loop fro
 | [`suggest-reviewers`](./skills/productivity/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
 | [`setup-skills`](./skills/productivity/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md` plus `docs/agents/` so the engineering skills know its issue tracker and domain-doc layout. |
 | [`write-a-skill`](./skills/productivity/write-a-skill/SKILL.md) | Adding, writing, or reworking a harness skill; formalizing a procedure you keep repeating by hand.                                        |
-| [`handoff`](./skills/productivity/handoff/SKILL.md)             | Compacting the current conversation into a handoff document so a fresh agent can continue the work.                                       |
-| [`handoff-grill`](./skills/productivity/handoff-grill/SKILL.md) | Pausing a `grill-me` session into a resumable handoff that preserves the open branches of the decision tree, not just the closed decisions — to continue later or hand to a teammate. |
 | [`teach`](./skills/productivity/teach/SKILL.md)                 | Learning a topic over multiple sessions — turns the current directory into a teaching workspace with a mission, citation-backed HTML lessons, reference cheat-sheets, and learning records. |
 
 ---

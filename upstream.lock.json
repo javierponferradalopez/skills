@@ -4,10 +4,16 @@
   "skills": {
     "grill-me": {
       "mine": "skills/engineer/grill-me",
-      "source": "skills/productivity/grill-me",
-      "base": "6eeb81b",
+      "source": "skills/productivity/grilling",
+      "base": "8370e76",
       "mode": "modified"
     },
+    "grill-with-docs": {
+      "mine": "skills/engineer/grill-me-with-docs",
+      "source": "skills/engineering/grill-with-docs",
+      "base": "78636f8",
+      "mode": "modified"
+    }
     "tdd": {
       "mine": "skills/engineer/tdd",
       "source": "skills/engineering/tdd",
@@ -15,7 +21,7 @@
       "mode": "modified"
     },
     "handoff": {
-      "mine": "skills/productivity/handoff",
+      "mine": "skills/engineer/handoff",
       "source": "skills/productivity/handoff",
       "base": "6eeb81b",
       "mode": "modified"
@@ -29,12 +35,6 @@
     "to-issues": {
       "mine": "skills/engineer/to-issues",
       "source": "skills/engineering/to-issues",
-      "base": "6eeb81b",
-      "mode": "modified"
-    },
-    "grill-with-docs": {
-      "mine": "skills/engineer/grill-with-docs",
-      "source": "skills/engineering/grill-with-docs",
       "base": "6eeb81b",
       "mode": "modified"
     },
@@ -67,6 +67,12 @@
       "source": "skills/productivity/writing-great-skills",
       "base": "6eeb81b",
       "mode": "modified"
-    }
+    },
+    "domain-modeling": {
+      "mine": "skills/engineer/domain-modeling",
+      "source": "skills/engineering/domain-modeling",
+      "base": "8370e76",
+      "mode": "pure"
+    },
   }
 }
