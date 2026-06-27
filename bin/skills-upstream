@@ -9,20 +9,21 @@
 #   mode    "modified" (3-way merge) | "pure" (take matt verbatim)
 #
 # Commands:
-#   sync-remotes      reconcile git remotes from the upstreams catalog (idempotent)
-#   status [<key>]    which forks did their upstream touch? (grouped; one origin if <key>)
-#   diff <key>        show the upstream change (base..ref) for that fork
-#   update <key>      apply the upstream change to your copy (3-way merge)
-#   pin <key>         set base = current upstream ref after reviewing/merging
-#   add <source> [mine] [mode]   adopt a NEW skill from the sole upstream
-#   list              dump the manifest, forks grouped by upstream
-#   doctor            sanity-check the manifest, paths, name collisions, upstreams
+#   sync-remotes                         reconcile git remotes from the upstreams catalog (idempotent)
+#   upstream-add <key> <url> [branch]    register an origin in the catalog (adopts nothing)
+#   status [<key>]                       which forks did their upstream touch? (grouped; one origin if <key>)
+#   diff <key>                           show the upstream change (base..ref) for that fork
+#   update <key>                         apply the upstream change to your copy (3-way merge)
+#   pin <key>                            set base = current upstream ref after reviewing/merging
+#   add <key> <source> [mine] [mode]     adopt a skill from an already-registered upstream
+#   list                                 dump the manifest, forks grouped by upstream
+#   doctor                               sanity-check the manifest, paths, name collisions, upstreams
 #
 # The 3-way merge works off git blobs, so it works even when matt's path is
 # renamed relative to yours. Runs only in the authoring repo.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="${SKILLS_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 MANIFEST="${SKILLS_MANIFEST:-$REPO/upstream.lock.json}"
 
 command -v jq >/dev/null || { echo "jq is missing." >&2; exit 1; }
@@ -298,39 +299,96 @@ cmd_update(){
   fi
 }
 
-cmd_add(){
-  # The explicit `add <key> <source>` form (and `upstream-add`) lands in a later
-  # change; until then, adopt from the sole registered upstream.
-  local nups; nups="$(jq -r '.upstreams | length' "$MANIFEST")"
-  [[ "$nups" -eq 1 ]] || {
-    echo "${c_red}$nups upstreams are registered — key-based 'add <key> <source>' isn't wired up yet.${c_off}" >&2; exit 1; }
-  local key; key="$(jq -r '.upstreams | keys[0]' "$MANIFEST")"
-  need_upstream_ref "$key"   # sets REF / REMOTE
+# Register an origin in the catalog. Adopts nothing — that's `add`'s job. Keeping
+# origin-registration separate from adoption means a URL typo can never spawn a
+# near-duplicate origin. After this, run `sync-remotes` to create the
+# upstream-<key> remote, then `add <key> <source>` to adopt skills from it.
+cmd_upstream_add(){
+  local key="${1:-}" url="${2:-}" branch="${3:-}"
+  [[ -n "$key" && -n "$url" ]] || { echo "usage: skills-upstream upstream-add <key> <url> [branch]" >&2; exit 1; }
 
-  # add <source-in-upstream> [mine] [mode]
-  local source="$1"
-  local name; name="$(basename "$source")"
-  local mine="${2:-skills/productivity/$name}"
-  local mode="${3:-pure}"
-  local mkey="$key:$name"
+  # The key namespaces every fork's manifest key as <key>:<name>; a ':' or
+  # whitespace in it would corrupt that scheme.
+  [[ "$key" =~ ^[A-Za-z0-9._-]+$ ]] || {
+    echo "${c_red}Invalid upstream key '$key'.${c_off} Use letters, digits, '.', '_' or '-' only." >&2; exit 1; }
+
+  if jq -e --arg k "$key" '.upstreams | has($k)' "$MANIFEST" >/dev/null 2>&1; then
+    echo "${c_red}Upstream '$key' is already registered${c_off} ${c_dim}($(jq -r --arg k "$key" '.upstreams[$k].url' "$MANIFEST"))${c_off}." >&2
+    echo "${c_dim}Edit upstream.lock.json to change its URL.${c_off}" >&2
+    exit 1
+  fi
+
+  local tmp; tmp="$(mktemp)"
+  if [[ -n "$branch" ]]; then
+    jq --arg k "$key" --arg u "$url" --arg b "$branch" \
+       '.upstreams[$k] = {url:$u, branch:$b}' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  else
+    # branch omitted: no `branch` field, so the ref follows the remote's default HEAD
+    jq --arg k "$key" --arg u "$url" \
+       '.upstreams[$k] = {url:$u}' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  fi
+
+  printf "%sRegistered upstream '%s'%s %s→ %s%s" "$c_grn" "$key" "$c_off" "$c_dim" "$url" "$c_off"
+  [[ -n "$branch" ]] && printf " %s(branch: %s)%s" "$c_dim" "$branch" "$c_off"
+  printf ".\n"
+  echo "Make its remote available: skills-upstream sync-remotes"
+  echo "Then adopt skills from it:  skills-upstream add $key <source>"
+}
+
+cmd_add(){
+  # add <key> <source> [mine] [mode] — adopt from an ALREADY-registered upstream.
+  local key="${1:-}" source="${2:-}"
+  [[ -n "$key" && -n "$source" ]] || { echo "usage: skills-upstream add <key> <source> [mine] [pure|modified]" >&2; exit 1; }
+  local mine_arg="${3:-}" mode="${4:-pure}"
 
   [[ "$mode" == "pure" || "$mode" == "modified" ]] || { echo "${c_red}mode must be 'pure' or 'modified'.${c_off}" >&2; exit 1; }
 
-  # 1) the skill exists in the upstream
+  # 1) the upstream must already be registered — origin-registration is a
+  #    separate, deliberate step (upstream-add), so adoption is explicit about
+  #    where it's borrowing from.
+  jq -e --arg k "$key" '.upstreams | has($k)' "$MANIFEST" >/dev/null 2>&1 || {
+    echo "${c_red}Upstream '$key' isn't registered.${c_off}" >&2
+    echo "${c_dim}Register its origin first: skills-upstream upstream-add $key <url> [branch]${c_off}" >&2
+    exit 1; }
+
+  need_upstream_ref "$key"   # sets REF / REMOTE
+
+  local name; name="$(basename "$source")"
+  local mkey="$key:$name"
+
+  # 2) the skill exists in the upstream at the resolved ref
   blob_exists "$REF" "$source/SKILL.md" || {
     echo "${c_red}Can't find '$source/SKILL.md' in $REF.${c_off} Run 'skills-upstream sync-remotes' and check the path." >&2; exit 1; }
 
-  # 2) key not already registered
-  exists "$mkey" && { echo "${c_red}Already tracking '$mkey'. Use 'update $mkey'.${c_off}" >&2; exit 1; }
+  # 3) key collision WITHIN this upstream. Cross-upstream homonyms never collide
+  #    (keys are namespaced <upstream>:<name>). Re-adding the very same source is
+  #    a no-op error (use update); a *different* source that shares the basename
+  #    is the rare genuine clash — ask for an explicit suffix to disambiguate.
+  if exists "$mkey"; then
+    if [[ "$(field "$mkey" source)" == "$source" ]]; then
+      echo "${c_red}Already tracking '$mkey'.${c_off} Use 'update $mkey'." >&2; exit 1
+    fi
+    echo "${c_yel}'$mkey' already names a different source ($(field "$mkey" source)).${c_off}" >&2
+    printf "Enter a suffix to disambiguate (e.g. '2' → %s:%s-2), or leave empty to abort: " "$key" "$name" >&2
+    local suffix; read -r suffix || true
+    [[ -n "$suffix" ]] || { echo "${c_red}No suffix given — aborted.${c_off}" >&2; exit 1; }
+    name="$name-$suffix"
+    mkey="$key:$name"
+    exists "$mkey" && { echo "${c_red}'$mkey' is also taken.${c_off} Pick another suffix." >&2; exit 1; }
+  fi
 
-  # 3) the name (folder) must be unique: install.sh flattens by name
-  local clash; clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d -name "$name" | head -1)"
-  [[ -n "$clash" ]] && { echo "${c_red}A skill folder '$name' already exists at ${clash#$REPO/}.${c_off} Pick another name with the 2nd argument." >&2; exit 1; }
+  local mine="${mine_arg:-skills/productivity/$name}"
 
-  # 4) destination must not exist
+  # 4) the destination folder name must be unique: install.sh flattens every
+  #    skill to ~/.claude/skills/<folder>, so two folders sharing a basename clash.
+  local folder; folder="$(basename "$mine")"
+  local clash; clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d -name "$folder" | head -1)"
+  [[ -n "$clash" ]] && { echo "${c_red}A skill folder '$folder' already exists at ${clash#$REPO/}.${c_off} Pick another name with the 'mine' argument." >&2; exit 1; }
+
+  # 5) destination must not exist
   [[ -e "$REPO/$mine" ]] && { echo "${c_red}'$mine' already exists.${c_off} Not overwriting anything." >&2; exit 1; }
 
-  # 5) copy all of the upstream's files into your structure
+  # 6) copy all of the upstream's files into your structure
   mkdir -p "$REPO/$mine"
   local rels; rels="$(files_at "$REF" "$source")"
   while IFS= read -r rel; do
@@ -340,7 +398,7 @@ cmd_add(){
     echo "  ${c_grn}+ $mine/$rel${c_off}"
   done <<< "$rels"
 
-  # 6) register in the manifest, base = current upstream ref
+  # 7) register in the manifest, base = current upstream ref
   local newbase; newbase="$(git rev-parse --short "$REF")"
   local tmp; tmp="$(mktemp)"
   jq --arg k "$mkey" --arg up "$key" --arg mine "$mine" --arg src "$source" --arg b "$newbase" --arg m "$mode" \
@@ -511,7 +569,7 @@ cmd_sync_remotes(){
   fi
 }
 
-usage(){ sed -n '2,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage(){ sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
   sync-remotes) cmd_sync_remotes ;;
@@ -521,7 +579,8 @@ case "${1:-}" in
   diff)   shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream diff <key>" >&2; exit 1; }; cmd_diff "$1" ;;
   update) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream update <key>" >&2; exit 1; }; cmd_update "$1" ;;
   pin)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream pin <key>" >&2; exit 1; }; cmd_pin "$1" ;;
-  add)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream add <source> [mine] [pure|modified]" >&2; exit 1; }; cmd_add "$@" ;;
+  upstream-add) shift; cmd_upstream_add "$@" ;;
+  add)    shift; cmd_add "$@" ;;
   ""|-h|--help|help) usage ;;
   *) echo "Unknown command: $1" >&2; usage; exit 1 ;;
 esac
