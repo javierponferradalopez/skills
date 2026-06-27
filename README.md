@@ -23,8 +23,8 @@ The harness lives in `~/.claude/`. Skills run entirely in the conversation and w
 - [Why this exists](#why-this-exists) — the philosophy: own your skills, borrow the best, stay in control
 - [Installation](#installation) — get the skills into `~/.claude/`
   - [Quick reference](#quick-reference--find-your-need) · [Uninstall](#uninstall)
-- [Maintenance — syncing with upstream](#maintenance--syncing-with-upstream) — pull other creators' updates without losing your edits
-  - [Quick reference](#quick-reference--find-your-need-1) · [How provenance is recorded](#how-provenance-is-recorded) · [One-time setup](#one-time-setup-fresh-clones) · [The `skills-upstream` tool](#the-tool-binskills-upstream) · [Adopting a new skill](#adopting-a-brand-new-skill-from-matt) · [Common scenarios](#common-scenarios)
+- [Maintenance — syncing with upstreams](#maintenance--syncing-with-upstreams) — pull other creators' updates without losing your edits
+  - [Quick reference](#quick-reference--find-your-need-1) · [How provenance is recorded](#how-provenance-is-recorded) · [One-time setup](#one-time-setup-fresh-clones) · [The `skills-upstream` tool](#the-tool-binskills-upstream) · [Registering an upstream & adopting skills](#registering-an-upstream--adopting-skills) · [Common scenarios](#common-scenarios)
 - [Stateless skills, conversational orchestration](#stateless-skills-conversational-orchestration) — how the skills are designed
 - [Skill catalog](#skill-catalog) — every skill and when to use it
 - [Credits](#credits) · [License](#license)
@@ -42,13 +42,13 @@ This repo is built around a different stance: **borrow the best, but own what yo
 - **Stay in sync without losing control.** Provenance is tracked per skill, so the tool can pull only what the original author changed and **3-way-merge** it into my version — surfacing real conflicts instead of overwriting my work. I decide, per skill, what to take and what to keep.
 - **Never depend 100% on something external.** If an upstream skill is renamed, deleted, or goes in a direction I don't like, my copy keeps working. Upstream is a source of ideas, not a dependency I'm chained to.
 
-The result: a harness that grows with the wider community **and** stays fully under my control. The [Maintenance](#maintenance--syncing-with-upstream) section is where that machinery lives.
+The result: a harness that grows with the wider community **and** stays fully under my control. The [Maintenance](#maintenance--syncing-with-upstreams) section is where that machinery lives.
 
 ---
 
 ## Installation
 
-> Just want the skills as they are today? This section is all you need. If you later want to pull Matt Pocock's newest changes into the skills forked from him, see [Maintenance](#maintenance--syncing-with-upstream).
+> Just want the skills as they are today? This section is all you need. If you later want to pull other creators' newest changes into the skills forked from them, see [Maintenance](#maintenance--syncing-with-upstreams).
 
 ### Quick reference — find your need
 
@@ -135,134 +135,159 @@ find ~/.claude -maxdepth 2 -type l -lname "*/skills/*" -delete
 
 ---
 
-## Maintenance — syncing with upstream
+## Maintenance — syncing with upstreams
 
-Many skills here are **forked from [Matt Pocock's skills](https://github.com/mattpocock/skills)**, but this is not a git fork: the two repos share no common history, and upstream renames and moves skills freely. So a plain `git merge` is not an option. Instead, provenance is tracked **per skill** in [`upstream.lock.json`](./upstream.lock.json), and a small tool brings over only the changes you want — without clobbering your local edits.
+Many skills here are **forked from other creators** — today [Matt Pocock's skills](https://github.com/mattpocock/skills), more in the future — but this is not a git fork: the repos share no common history, and each upstream renames and moves skills freely. So a plain `git merge` is not an option. Instead, every origin is registered once in an **upstreams catalog**, provenance is tracked **per fork** in [`upstream.lock.json`](./upstream.lock.json), and a small tool brings over only the changes you want — without clobbering your local edits.
 
-You only need this section if you want to keep your forked skills up to date with upstream. Skills you authored yourself (`implement`, `validate`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
+Each origin is an **upstream** with a short **key** (e.g. `matt`). Every fork records which key it came from and is addressed by a namespaced **manifest key** `<upstream>:<name>` (e.g. `matt:teach`) — so two creators can ship a skill of the same name without colliding. That manifest key is tool-facing only; the name you *invoke* a skill with still comes from its `SKILL.md` frontmatter.
+
+You only need this section if you want to keep your forked skills up to date. Skills you authored yourself (`implement`, `validate`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
 
 ### Quick reference — find your need
 
-Start here. Match what you want to do, run the command, and follow the deep-dive section below if you need the details. Almost everything starts with `git fetch upstream` so the comparison is against Matt's latest.
+Start here. Match what you want to do, run the command, and follow the deep-dive section below if you need the details. Refresh your origins first with `sync-remotes` so every comparison is against each creator's latest.
 
-| I want to…                                                  | Run                                                                 |
-| ----------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Check everything is healthy** (or just cloned the repo)   | `bin/skills-upstream doctor`                                        |
-| **See if Matt changed any of my forked skills**             | `git fetch upstream && bin/skills-upstream status`                  |
-| **Review what changed in one skill** before pulling         | `bin/skills-upstream diff <skill>`                                  |
-| **Pull Matt's changes into one skill**                      | `bin/skills-upstream update <skill>` → resolve conflicts → `pin <skill>` |
-| **Catch up several skills at once**                         | `for s in tdd handoff to-prd; do bin/skills-upstream update "$s"; done` |
-| **Mark a skill as fully synced** (lock in the new base)     | `bin/skills-upstream pin <skill>`                                   |
-| **Adopt a brand-new skill Matt just shipped**               | `bin/skills-upstream add <source-in-matt>`                          |
-| **See which of my skills aren't tracked**                   | `bin/skills-upstream doctor` (Tracking coverage section)            |
-| **List all tracked forks** (source, base, mode)             | `bin/skills-upstream list`                                          |
-| **Something looks broken / cryptic error**                  | `bin/skills-upstream doctor` (it pinpoints the exact problem)       |
+| I want to…                                                  | Run                                                            | Example                                                          |
+| ----------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Set up a fresh clone / refresh all origins**              | `bin/skills-upstream sync-remotes`                            | `bin/skills-upstream sync-remotes`                              |
+| **Check everything is healthy**                             | `bin/skills-upstream doctor`                                  | `bin/skills-upstream doctor`                                    |
+| **See which forks their upstreams touched**                 | `bin/skills-upstream sync-remotes && … status`                | `bin/skills-upstream sync-remotes && bin/skills-upstream status`|
+| **Focus on one creator**                                    | `bin/skills-upstream status <key>`                            | `bin/skills-upstream status matt`                               |
+| **Review what changed in one fork** before pulling         | `bin/skills-upstream diff <upstream>:<name>`                  | `bin/skills-upstream diff matt:teach`                           |
+| **Pull an upstream's changes into one fork**                | `update <upstream>:<name>` → resolve → `pin <upstream>:<name>`| `bin/skills-upstream update matt:teach` → resolve → `pin matt:teach` |
+| **Register a new creator's repo**                           | `bin/skills-upstream upstream-add <key> <url> [branch]`       | `bin/skills-upstream upstream-add alice https://github.com/alice/skills.git` |
+| **Adopt a skill from a registered upstream**                | `bin/skills-upstream add <key> <source> [mine]`               | `bin/skills-upstream add alice skills/agents/prototype skills/utils/prototype` |
+| **Stop tracking one fork** (keep your copy as your own)     | `bin/skills-upstream detach <upstream>:<name>`                | `bin/skills-upstream detach matt:teach`                         |
+| **Drop a whole upstream** (keep its forks as self-authored) | `bin/skills-upstream upstream-remove <key>`                   | `bin/skills-upstream upstream-remove alice`                     |
+| **List all forks grouped by origin** (source, base, mode)   | `bin/skills-upstream list`                                    | `bin/skills-upstream list`                                      |
+| **Something looks broken / cryptic error**                  | `bin/skills-upstream doctor`                                  | `bin/skills-upstream doctor`                                    |
 
-> `<skill>` is the name in the left column of `list` (e.g. `teach`, `tdd`). `<source-in-matt>` is a path inside Matt's repo (e.g. `skills/engineering/prototype`).
+> `<key>` is an upstream's short name (e.g. `matt`). `<upstream>:<name>` is a fork's manifest key from the left column of `list` (e.g. `matt:teach`). `<source>` is a path inside that upstream's repo (e.g. `skills/engineering/prototype`). `[mine]` is where it lands in *your* tree — pick any category, independent of the author's path; omit it and it defaults to `skills/productivity/<name>`.
 
 ### How provenance is recorded
 
-`upstream.lock.json` holds one entry per tracked fork:
+`upstream.lock.json` has two parts: the `upstreams` catalog of origins, and one `skills` entry per tracked fork.
 
 ```jsonc
-"teach": {
-  "mine":   "skills/productivity/teach",        // your copy
-  "source": "skills/productivity/teach",        // the equivalent path in Matt's repo (may be renamed/moved)
-  "base":   "6eeb81b",                          // the upstream commit you are synced from
-  "mode":   "modified"                          // "modified" = 3-way merge · "pure" = take upstream verbatim
+{
+  "upstreams": {
+    "matt": { "url": "https://github.com/mattpocock/skills.git" }
+    //         "branch" is optional — when absent, the ref follows the remote's default HEAD
+  },
+  "skills": {
+    "matt:teach": {
+      "upstream": "matt",                     // which catalog origin this fork came from
+      "mine":     "skills/productivity/teach",// your copy
+      "source":   "skills/productivity/teach",// the equivalent path in that upstream (may be renamed/moved)
+      "base":     "6eeb81b",                  // the upstream commit you are synced from
+      "mode":     "modified"                  // "modified" = 3-way merge · "pure" = take upstream verbatim
+    }
+  }
 }
 ```
 
-The `base` commit is what makes selective updates possible: it lets the tool compute *exactly* what Matt changed since your last sync and three-way-merge only that delta into your copy — even when the paths differ. `mode` decides how an update is applied:
+The catalog stores each URL **once**; every fork references its origin by key. The `base` commit is what makes selective updates possible: it lets the tool compute *exactly* what that upstream changed since your last sync and three-way-merge only that delta into your copy — even when the paths differ. `mode` decides how an update is applied:
 
 - **`modified`** — your copy has intentional local changes (e.g. translations, tweaks). Updates are a **3-way merge** that preserves your edits and only flags real conflicts.
-- **`pure`** — you track Matt's version verbatim. Updates **overwrite** your copy with upstream.
+- **`pure`** — you track the upstream's version verbatim. Updates **overwrite** your copy with upstream.
 
 ### One-time setup (fresh clones)
 
-The tool compares against the `upstream` remote. If you cloned this repo, add it once:
+The catalog is the single source of truth for your git remotes. After cloning, one command derives them all:
 
 ```bash
-git remote add upstream https://github.com/mattpocock/skills.git
-git fetch upstream
-bin/skills-upstream doctor   # confirms the manifest, paths and remote are all healthy
+bin/skills-upstream sync-remotes   # creates an `upstream-<key>` remote per catalog entry, fetches, records each default branch
+bin/skills-upstream doctor         # confirms the manifest, paths and remotes are all healthy
 ```
 
-`doctor` is the first thing to run whenever something looks off — it works even before the remote is added (it just skips the upstream-only checks and tells you the exact command to add it).
+`sync-remotes` is idempotent — run it any time to add a newly-registered origin, fix a changed URL, and re-fetch everyone. `doctor` is the first thing to run whenever something looks off; it works even before the remotes exist (it skips the upstream-only checks and tells you to run `sync-remotes`).
 
 ### The tool: `bin/skills-upstream`
 
-It runs only in this authoring repo (it needs `jq` and the git history); it never ships to `~/.claude`.
+It runs only in this authoring repo (it needs `jq` and the git history); it never ships to `~/.claude`. Each origin maps to a git remote `upstream-<key>`, and the compare ref is `upstream-<key>/<branch>` (the catalog branch, or the remote's default HEAD when none is pinned).
 
-| Command                       | What it does                                                                 |
-| ----------------------------- | ---------------------------------------------------------------------------- |
-| `bin/skills-upstream doctor`  | Sanity-checks the whole manifest: valid JSON, every `mine` path exists, no installer name collisions, which folders are untracked, and (if `upstream` is fetched) that every `source`/`base` still resolves. Run it first when something looks off. |
-| `bin/skills-upstream status`  | For each tracked fork, shows whether Matt changed it since your `base`.       |
-| `bin/skills-upstream list`    | Dumps the manifest (source path, base, mode per skill).                       |
-| `bin/skills-upstream diff <skill>`   | Shows Matt's changes for that fork (`base..upstream/main`).            |
-| `bin/skills-upstream update <skill>` | Applies Matt's changes to your copy (3-way merge, or overwrite if `pure`). |
-| `bin/skills-upstream pin <skill>`    | Records the current upstream as the new `base`, once you're happy.    |
-| `bin/skills-upstream add <source> [mine] [mode]` | Adopts a **new** skill from Matt and registers it in the manifest. |
+| Command                                            | What it does                                                                 |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `bin/skills-upstream sync-remotes`                 | Reconciles git remotes from the catalog: adds missing `upstream-<key>` remotes, fixes changed URLs, fetches all, records each default HEAD. Idempotent. |
+| `bin/skills-upstream upstream-add <key> <url> [branch]` | Registers an origin in the catalog. Adopts nothing — run `sync-remotes` next, then `add`. |
+| `bin/skills-upstream upstream-remove <key>`        | Drops an origin and its remote. If forks still reference it, lists them and asks whether to keep them as self-authored. |
+| `bin/skills-upstream status [<key>]`               | Walks every upstream (or just `<key>`), grouped by origin: which forks the upstream touched since each `base`. Degrades gracefully on a missing remote. |
+| `bin/skills-upstream diff <upstream>:<name>`       | Shows that fork's upstream changes (`base..upstream-<key>/<branch>`).        |
+| `bin/skills-upstream update <upstream>:<name>`     | Applies the upstream's changes to your copy (3-way merge, or overwrite if `pure`). |
+| `bin/skills-upstream pin <upstream>:<name>`        | Records that fork's current upstream ref as the new `base`, once you're happy. |
+| `bin/skills-upstream add <key> <source> [mine] [mode]` | Adopts a skill from an **already-registered** upstream and registers the fork. |
+| `bin/skills-upstream detach <upstream>:<name>`     | Stops tracking one fork — drops its manifest entry, leaves `mine/` intact (becomes self-authored). |
+| `bin/skills-upstream list`                         | Dumps the manifest, forks grouped under their origin (source, base, mode).   |
+| `bin/skills-upstream doctor`                       | Sanity-checks everything: valid JSON, every `mine` path exists, no installer name collisions, untracked folders, and per-upstream that the remote/ref resolves and every `source`/`base` is still alive. |
 
-### Adopting a brand-new skill from Matt
+### Registering an upstream & adopting skills
 
-When Matt ships a skill you don't have yet, `add` copies it into your structure and starts tracking it — no manual copy/paste:
+Borrowing from a new creator is two deliberate steps — register the origin once, then adopt skills from it. Keeping them separate means a URL typo can never spawn a near-duplicate origin.
 
 ```bash
-git fetch upstream
-bin/skills-upstream add skills/engineering/prototype          # -> skills/productivity/prototype, mode "pure"
-bin/skills-upstream add skills/engineering/prototype skills/engineer/prototype modified
+# 1. register the origin (branch optional; omit to follow the repo's default branch)
+bin/skills-upstream upstream-add alice https://github.com/alice/skills.git
+bin/skills-upstream sync-remotes                      # create the upstream-alice remote + fetch
+
+# 2. adopt skills from it — <key> is required and must already be registered
+bin/skills-upstream add alice skills/agents/prototype                         # -> skills/productivity/prototype, mode "pure"
+bin/skills-upstream add alice skills/agents/prototype skills/engineer/prototype modified
 ```
 
-- `<source>` is the path **in Matt's repo** (find it with `git ls-tree -r --name-only upstream/main | grep <name>`).
+- `<key>` is the upstream's catalog key. `add` fails clearly if it isn't registered yet, pointing you to `upstream-add`.
+- `<source>` is the path **in that upstream's repo** (find it with `git ls-tree -r --name-only upstream-<key>/HEAD | grep <name>`).
 - `[mine]` is where it lands in *your* tree (default `skills/productivity/<name>`). Pick any category folder — the installer flattens it to `~/.claude/skills/<name>/` anyway.
-- `[mode]` defaults to `pure` (track Matt verbatim). If you plan to customize it, pass `modified`, or flip its `mode` in the manifest once you start editing — otherwise the next `update` will overwrite your changes.
+- `[mode]` defaults to `pure` (track the upstream verbatim). If you plan to customize it, pass `modified`, or flip its `mode` in the manifest once you start editing — otherwise the next `update` will overwrite your changes.
 
-It copies **all** of the skill's files (e.g. `SKILL.md` plus any `UI.md`, `GLOSSARY.md`, `scripts/`), pins `base` to the current upstream, and refuses to clobber an existing skill or name collision. The new skill's invocation name comes from its `SKILL.md` frontmatter `name:`, exactly as Matt wrote it.
+`add` copies **all** of the skill's files (e.g. `SKILL.md` plus any `UI.md`, `GLOSSARY.md`, `scripts/`), registers it as `<key>:<name>`, pins `base` to the current upstream ref, and refuses to clobber an existing skill or folder-name collision. In the rare case where one upstream has two sources sharing a basename, `add` asks for an explicit suffix to disambiguate the key. The new skill's invocation name comes from its `SKILL.md` frontmatter `name:`, exactly as the author wrote it.
 
 ### Common scenarios
 
-Every flow starts the same way — pull Matt's latest and see what moved:
+Every flow starts the same way — refresh your origins and see what moved, grouped by creator:
 
 ```bash
-git fetch upstream && bin/skills-upstream status
+bin/skills-upstream sync-remotes && bin/skills-upstream status
 ```
 
-**1. Pull Matt's changes into one forked skill** — the everyday case:
+**1. Pull an upstream's changes into one forked skill** — the everyday case:
 
 ```bash
-bin/skills-upstream diff teach          # review what Matt changed
-bin/skills-upstream update teach        # 3-way merge into your copy
+bin/skills-upstream diff matt:teach          # review what the upstream changed
+bin/skills-upstream update matt:teach        # 3-way merge into your copy
 # resolve any conflict markers (<<<<<<<), then test the skill
-bin/skills-upstream pin teach           # lock in the new base
+bin/skills-upstream pin matt:teach           # lock in the new base
 ```
 
 **2. Catch up several skills at once** — `status` listed more than one:
 
 ```bash
-for s in tdd to-prd handoff; do bin/skills-upstream update "$s"; done
+for s in matt:tdd matt:to-prd matt:handoff; do bin/skills-upstream update "$s"; done
 # review/resolve each, then pin the ones you're happy with
-for s in tdd to-prd handoff; do bin/skills-upstream pin "$s"; done
+for s in matt:tdd matt:to-prd matt:handoff; do bin/skills-upstream pin "$s"; done
 ```
 
-**3. Adopt a brand-new skill Matt just shipped:**
+**3. Borrow from a new creator** — register, sync, adopt:
 
 ```bash
-git ls-tree -r --name-only upstream/main | grep prototype   # find its path
-bin/skills-upstream add skills/engineering/prototype        # copy + register (mode pure)
+bin/skills-upstream upstream-add alice https://github.com/alice/skills.git
+bin/skills-upstream sync-remotes
+git ls-tree -r --name-only upstream-alice/HEAD | grep prototype   # find its path
+bin/skills-upstream add alice skills/agents/prototype             # copy + register (mode pure)
 ```
 
 **4. You've started customizing a `pure` skill** — stop future overwrites by switching its mode to `modified` in `upstream.lock.json`, so the next `update` does a 3-way merge instead:
 
 ```jsonc
-"prototype": { ..., "mode": "modified" }
+"alice:prototype": { ..., "mode": "modified" }
 ```
 
-**5. Matt renamed or deleted a skill** — `status` flags it as `GONE from matt`. Decide per skill: drop tracking (delete its entry from `upstream.lock.json`, keep your copy as your own), or repoint `source` to its new path if he just moved it.
+**5. An upstream renamed or deleted a skill** — `status` flags it as `GONE from <key>`. Decide per skill: `detach <upstream>:<name>` to keep your copy as your own, or repoint `source` to its new path if it just moved.
 
-**6. "Did I miss anything?"** — `bin/skills-upstream status` is the single source of truth: green means your copy is synced to its `base`, yellow means Matt moved on since then.
+**6. You no longer follow a creator** — `upstream-remove <key>` drops the origin and its remote. If forks still point at it, it lists them and asks whether to detach each (keeping every `mine/` copy as self-authored); answer `n` or empty and it touches nothing.
 
-`update` only touches the one skill you name, so you upgrade exactly what you want and leave the rest frozen. On a `modified` skill, expect conflicts where your local edits overlap Matt's — that's the safety net working; resolve them by hand. Heavily diverged skills (`grill-me`, `teach`, `grill-with-docs`, `improve-codebase-architecture`) will conflict more often; near-identical ones (`tdd`, `handoff`, `to-prd`, `to-issues`) usually merge clean.
+**7. "Did I miss anything?"** — `bin/skills-upstream status` is the single source of truth: green means your copy is synced to its `base`, yellow means the upstream moved on since then.
+
+`update` only touches the one fork you name, so you upgrade exactly what you want and leave the rest frozen. On a `modified` skill, expect conflicts where your local edits overlap the upstream's — that's the safety net working; resolve them by hand. Heavily diverged skills (`grill-me`, `teach`, `grill-with-docs`, `improve-codebase-architecture`) will conflict more often; near-identical ones (`tdd`, `handoff`, `to-prd`, `to-issues`) usually merge clean.
 
 ---
 

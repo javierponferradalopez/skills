@@ -9,21 +9,24 @@
 #   mode    "modified" (3-way merge) | "pure" (take matt verbatim)
 #
 # Commands:
-#   status            which forks did matt touch since their base?
-#   diff <skill>      show matt's change (base..upstream) for that fork
-#   update <skill>    apply matt's changes to your copy (3-way merge)
-#   pin <skill>       set base = current upstream after reviewing/merging
-#   add <source> [mine] [mode]   adopt a NEW skill from matt and register it
-#   list              dump the manifest
-#   doctor            sanity-check the manifest, paths, name collisions, upstream
+#   sync-remotes                         reconcile git remotes from the upstreams catalog (idempotent)
+#   upstream-add <key> <url> [branch]    register an origin in the catalog (adopts nothing)
+#   upstream-remove <key>                drop an origin; offers to keep its forks as self-authored
+#   status [<key>]                       which forks did their upstream touch? (grouped; one origin if <key>)
+#   diff <key>                           show the upstream change (base..ref) for that fork
+#   update <key>                         apply the upstream change to your copy (3-way merge)
+#   pin <key>                            set base = current upstream ref after reviewing/merging
+#   add <key> <source> [mine] [mode]     adopt a skill from an already-registered upstream
+#   detach <upstream>:<name>             stop tracking one fork, keep mine/ (becomes self-authored)
+#   list                                 dump the manifest, forks grouped by upstream
+#   doctor                               sanity-check the manifest, paths, name collisions, upstreams
 #
 # The 3-way merge works off git blobs, so it works even when matt's path is
 # renamed relative to yours. Runs only in the authoring repo.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MANIFEST="$REPO/upstream.lock.json"
-UPSTREAM_REF="${SKILLS_UPSTREAM_REF:-upstream/main}"
+REPO="${SKILLS_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+MANIFEST="${SKILLS_MANIFEST:-$REPO/upstream.lock.json}"
 
 command -v jq >/dev/null || { echo "jq is missing." >&2; exit 1; }
 [[ -f "$MANIFEST" ]] || { echo "Can't find $MANIFEST" >&2; exit 1; }
@@ -37,21 +40,68 @@ if ! jq -e . "$MANIFEST" >/dev/null 2>&1; then
   exit 1
 fi
 
-# The upstream remote is what every git-based command compares against. Without it,
-# git fails with an opaque message — catch it here with a fix the user can copy-paste.
-needs_upstream(){
-  local remote="${UPSTREAM_REF%%/*}"   # "upstream" out of "upstream/main"
-  if ! git rev-parse --verify --quiet "$UPSTREAM_REF" >/dev/null 2>&1; then
-    echo "${c_red}Can't resolve '$UPSTREAM_REF'.${c_off}" >&2
-    if ! git remote get-url "$remote" >/dev/null 2>&1; then
-      echo "${c_dim}The '$remote' remote is missing. Add it once:${c_off}" >&2
-      echo "    git remote add $remote $(jq -r '.upstream' "$MANIFEST")" >&2
-      echo "    git fetch $remote" >&2
+# This tool understands ONLY the multi-upstream schema: a top-level `upstreams`
+# catalog plus per-fork `upstream` keys. The legacy single-`upstream` string is
+# rejected loudly so we never run against a half-migrated manifest.
+# See docs/adr/0001-multiple-upstreams.md.
+if [[ "$(jq -r 'has("upstream")' "$MANIFEST")" == "true" ]]; then
+  echo "${c_red}$MANIFEST uses the legacy single-upstream schema.${c_off}" >&2
+  echo "${c_dim}The top-level \"upstream\" string is no longer supported. Migrate to the new${c_off}" >&2
+  echo "${c_dim}multi-upstream schema: move the url under \"upstreams.<key>.url\", give every${c_off}" >&2
+  echo "${c_dim}fork an \"upstream\" field, and namespace its key as \"<upstream>:<name>\".${c_off}" >&2
+  echo "${c_dim}See docs/adr/0001-multiple-upstreams.md.${c_off}" >&2
+  exit 1
+fi
+if [[ "$(jq -r '.upstreams | type' "$MANIFEST")" != "object" ]]; then
+  echo "${c_red}$MANIFEST is missing the \"upstreams\" catalog.${c_off}" >&2
+  echo "${c_dim}Expected a top-level \"upstreams\" object mapping <key> to { url, branch? }.${c_off}" >&2
+  echo "${c_dim}See docs/adr/0001-multiple-upstreams.md.${c_off}" >&2
+  exit 1
+fi
+
+# --- per-upstream remote / ref resolution -----------------------------------
+# Each origin maps to a git remote `upstream-<key>`. Its compare ref is
+# `upstream-<key>/<branch>`, where <branch> is the catalog branch or, when that
+# is absent, the remote's default HEAD recorded by `git remote set-head -a`
+# (done by sync-remotes).
+up_remote(){ printf 'upstream-%s\n' "$1"; }
+
+up_branch(){ # <key> -> branch (catalog override, else detected default HEAD), or empty
+  local key="$1" branch
+  branch="$(jq -r --arg k "$key" '.upstreams[$k].branch // empty' "$MANIFEST")"
+  if [[ -n "$branch" ]]; then printf '%s\n' "$branch"; return 0; fi
+  local remote head
+  remote="$(up_remote "$key")"
+  head="$(git symbolic-ref --quiet --short "refs/remotes/$remote/HEAD" 2>/dev/null)" || return 0
+  printf '%s\n' "${head#"$remote"/}"
+}
+
+up_ref(){ # <key> -> upstream-<key>/<branch>; non-zero if no branch is resolvable
+  local key="$1" branch; branch="$(up_branch "$key")"
+  [[ -n "$branch" ]] || return 1
+  printf '%s/%s\n' "$(up_remote "$key")" "$branch"
+}
+
+# Resolve an upstream key into globals REMOTE / REF, or exit with sync-remotes
+# guidance. Call at command level only (never inside $(...), so exit propagates).
+need_upstream_ref(){ # <upstream-key>
+  REMOTE="$(up_remote "$1")"
+  REF="$(up_ref "$1" 2>/dev/null || true)"
+  if [[ -z "$REF" ]] || ! git rev-parse --verify --quiet "$REF" >/dev/null 2>&1; then
+    echo "${c_red}Can't resolve the compare ref for upstream '$1'.${c_off}" >&2
+    if ! git remote get-url "$REMOTE" >/dev/null 2>&1; then
+      echo "${c_dim}The '$REMOTE' remote is missing — run: skills-upstream sync-remotes${c_off}" >&2
     else
-      echo "${c_dim}Fetch the latest first:  git fetch $remote${c_off}" >&2
+      echo "${c_dim}Fetch it and record its default branch — run: skills-upstream sync-remotes${c_off}" >&2
     fi
     exit 1
   fi
+}
+
+# Same, resolving a tracked skill's origin via its `upstream` field; sets UP too.
+need_skill_ref(){ # <skill-key>
+  UP="$(field "$1" upstream)"
+  need_upstream_ref "$UP"
 }
 
 # --- manifest helpers -------------------------------------------------------
@@ -71,82 +121,147 @@ require_skill(){
   exists "$1" || { echo "${c_red}Not tracking skill '$1'.${c_off} See 'skills-upstream list'." >&2; exit 1; }
 }
 
-# any matt changes for this fork between its base and upstream?
-has_upstream_changes(){ # <base> <source>
-  ! git diff --quiet "$1" "$UPSTREAM_REF" -- "$2" 2>/dev/null
+# any upstream changes for this fork between its base and the resolved ref?
+has_upstream_changes(){ # <ref> <base> <source>
+  ! git diff --quiet "$2" "$1" -- "$3" 2>/dev/null
 }
 
+# Forks grouped under their origin. The first column is the tool-facing manifest
+# key (<upstream>:<name>) you pass to other commands — NOT the invocable name,
+# which comes from each skill's SKILL.md frontmatter.
 cmd_list(){
-  printf "%-32s %-42s %-9s %s\n" "SKILL" "SOURCE (matt)" "BASE" "MODE"
-  for k in $(skill_keys); do
-    printf "%-32s %-42s %-9s %s\n" "$k" "$(field "$k" source)" "$(field "$k" base)" "$(field "$k" mode)"
+  local shown=""
+  for up in $(jq -r '.upstreams | keys[]' "$MANIFEST"); do
+    local url branch
+    url="$(jq -r --arg u "$up" '.upstreams[$u].url' "$MANIFEST")"
+    branch="$(jq -r --arg u "$up" '.upstreams[$u].branch // empty' "$MANIFEST")"
+    printf "%s%s%s  %s%s%s" "$c_bld" "$up" "$c_off" "$c_dim" "$url" "$c_off"
+    [[ -n "$branch" ]] && printf " %s(branch: %s)%s" "$c_dim" "$branch" "$c_off"
+    printf "\n"
+
+    local keys; keys="$(jq -r --arg u "$up" \
+      '.skills | to_entries | map(select(.value.upstream == $u)) | .[].key' "$MANIFEST")"
+    if [[ -z "$keys" ]]; then
+      printf "  %s(no forks)%s\n" "$c_dim" "$c_off"
+    else
+      printf "  %-30s %-42s %-9s %s\n" "KEY" "SOURCE" "BASE" "MODE"
+      for k in $keys; do
+        printf "  %-30s %-42s %-9s %s\n" "$k" "$(field "$k" source)" "$(field "$k" base)" "$(field "$k" mode)"
+        shown+="$k"$'\n'
+      done
+    fi
+    echo
   done
+
+  # A fork whose 'upstream' isn't in the catalog would silently vanish above;
+  # surface it instead of dropping it on the floor.
+  local orphans=""
+  for k in $(skill_keys); do
+    grep -qxF "$k" <<< "$shown" || orphans+="$k"$'\n'
+  done
+  if [[ -n "${orphans//[$'\n']/}" ]]; then
+    printf "%s(no registered upstream)%s\n" "$c_yel" "$c_off"
+    printf "  %-30s %-42s %-9s %s\n" "KEY" "SOURCE" "BASE" "MODE"
+    while IFS= read -r k; do
+      [[ -z "$k" ]] && continue
+      printf "  %s%-30s%s %-42s %-9s %s\n" "$c_yel" "$k" "$c_off" "$(field "$k" source)" "$(field "$k" base)" "$(field "$k" mode)"
+    done <<< "$orphans"
+  fi
 }
 
-cmd_status(){
-  needs_upstream
-  echo "${c_dim}Comparing against $UPSTREAM_REF (run 'git fetch upstream' first).${c_off}"
-  local up_head; up_head="$(git rev-parse --short "$UPSTREAM_REF")"
-  echo "${c_dim}$UPSTREAM_REF is at $up_head.${c_off}"
-  echo
-  local changed=0
-  for k in $(skill_keys); do
-    local base source mode
-    base="$(field "$k" base)"; source="$(field "$k" source)"; mode="$(field "$k" mode)"
-    if ! blob_exists "$UPSTREAM_REF" "$source/SKILL.md"; then
-      printf "  %s%-32s%s %sGONE from matt (renamed?)%s\n" "$c_yel" "$k" "$c_off" "$c_yel" "$c_off"
-      continue
+# Walk every upstream (or one if filtered), grouped by origin with a per-origin
+# header and its short ref. A missing/unresolvable remote degrades gracefully:
+# report it, suggest sync-remotes, and keep walking the other origins.
+cmd_status(){ # [<upstream-key>]
+  local filter="${1:-}"
+  local ups; ups="$(jq -r '.upstreams | keys[]' "$MANIFEST")"
+  if [[ -n "$filter" ]]; then
+    jq -e --arg k "$filter" '.upstreams | has($k)' "$MANIFEST" >/dev/null \
+      || { echo "${c_red}No such upstream '$filter'.${c_off} Known: $(echo $ups | tr '\n' ' ')" >&2; exit 1; }
+    ups="$filter"
+  fi
+
+  local changed=0 degraded=0 first=1
+  for up in $ups; do
+    [[ $first -eq 1 ]] || echo; first=0
+    local remote ref; remote="$(up_remote "$up")"; ref="$(up_ref "$up" 2>/dev/null || true)"
+
+    if [[ -z "$ref" ]] || ! git rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
+      printf "%s%s%s %s— remote unavailable%s\n" "$c_bld" "$up" "$c_off" "$c_yel" "$c_off"
+      if ! git remote get-url "$remote" >/dev/null 2>&1; then
+        echo "  ${c_yel}'$remote' remote is missing — run 'skills-upstream sync-remotes'.${c_off}"
+      else
+        echo "  ${c_yel}can't resolve $remote's ref — run 'skills-upstream sync-remotes'.${c_off}"
+      fi
+      degraded=$((degraded+1)); continue
     fi
-    if has_upstream_changes "$base" "$source"; then
-      local n; n="$(git diff --numstat "$base" "$UPSTREAM_REF" -- "$source" | awk '{a+=$1;d+=$2} END{print a"+/"d"-"}')"
-      printf "  %s%-32s%s matt changes (%s)  %s[%s]%s\n" "$c_yel" "$k" "$c_off" "$n" "$c_dim" "$mode" "$c_off"
-      changed=$((changed+1))
-    else
-      printf "  %s%-32s%s up to date%s\n" "$c_grn" "$k" "$c_off" "$c_off"
-    fi
+
+    local short; short="$(git rev-parse --short "$ref")"
+    printf "%s%s%s %s($ref @ %s)%s\n" "$c_bld" "$up" "$c_off" "$c_dim" "$short" "$c_off"
+
+    local keys; keys="$(jq -r --arg u "$up" '.skills | to_entries | map(select(.value.upstream==$u)) | .[].key' "$MANIFEST")"
+    if [[ -z "$keys" ]]; then echo "  ${c_dim}(no forks)${c_off}"; continue; fi
+    for k in $keys; do
+      local base source mode
+      base="$(field "$k" base)"; source="$(field "$k" source)"; mode="$(field "$k" mode)"
+      if ! blob_exists "$ref" "$source/SKILL.md"; then
+        printf "  %s%-32s%s %sGONE from %s (renamed?)%s\n" "$c_yel" "$k" "$c_off" "$c_yel" "$up" "$c_off"
+        continue
+      fi
+      if has_upstream_changes "$ref" "$base" "$source"; then
+        local n; n="$(git diff --numstat "$base" "$ref" -- "$source" | awk '{a+=$1;d+=$2} END{print a"+/"d"-"}')"
+        printf "  %s%-32s%s changes (%s)  %s[%s]%s\n" "$c_yel" "$k" "$c_off" "$n" "$c_dim" "$mode" "$c_off"
+        changed=$((changed+1))
+      else
+        printf "  %s%-32s%s up to date%s\n" "$c_grn" "$k" "$c_off" "$c_off"
+      fi
+    done
   done
+
   echo
+  [[ $degraded -gt 0 ]] && echo "${c_yel}$degraded upstream(s) unavailable — run 'skills-upstream sync-remotes'.${c_off}"
   if [[ $changed -eq 0 ]]; then
-    echo "${c_grn}Everything up to date with matt.${c_off}"
+    echo "${c_grn}Everything up to date.${c_off}"
   else
-    echo "$changed fork(s) with changes. Review with 'diff <skill>', apply with 'update <skill>', lock in with 'pin <skill>'."
+    echo "$changed fork(s) with changes. Review with 'diff <key>', apply with 'update <key>', lock in with 'pin <key>'."
   fi
 }
 
 cmd_diff(){
-  needs_upstream
   require_skill "$1"
+  need_skill_ref "$1"
   local base source; base="$(field "$1" base)"; source="$(field "$1" source)"
-  blob_exists "$UPSTREAM_REF" "$source/SKILL.md" || { echo "${c_yel}'$source' no longer exists in $UPSTREAM_REF.${c_off}"; exit 0; }
-  git --no-pager diff "$base" "$UPSTREAM_REF" -- "$source"
+  blob_exists "$REF" "$source/SKILL.md" || {
+    echo "${c_red}'$source' no longer exists in $REF — the upstream deleted/renamed it.${c_off}" >&2; exit 1; }
+  git --no-pager diff "$base" "$REF" -- "$source"
 }
 
 cmd_update(){
-  needs_upstream
   require_skill "$1"
+  need_skill_ref "$1"
   local base source mine mode
   base="$(field "$1" base)"; source="$(field "$1" source)"; mine="$REPO/$(field "$1" mine)"; mode="$(field "$1" mode)"
 
-  if ! blob_exists "$UPSTREAM_REF" "$source/SKILL.md"; then
-    echo "${c_yel}'$source' no longer exists in $UPSTREAM_REF — matt deleted/renamed it. Resolve by hand.${c_off}"; exit 1
+  if ! blob_exists "$REF" "$source/SKILL.md"; then
+    echo "${c_yel}'$source' no longer exists in $REF — the upstream deleted/renamed it. Resolve by hand.${c_off}"; exit 1
   fi
-  if ! has_upstream_changes "$base" "$source"; then
+  if ! has_upstream_changes "$REF" "$base" "$source"; then
     echo "${c_grn}'$1' is already up to date; nothing to apply.${c_off}"; exit 0
   fi
 
-  # union of files in base and in upstream (paths relative to the source dir)
-  local rels; rels="$( { files_at "$base" "$source"; files_at "$UPSTREAM_REF" "$source"; } | sort -u )"
+  # union of files in base and in the upstream ref (paths relative to the source dir)
+  local rels; rels="$( { files_at "$base" "$source"; files_at "$REF" "$source"; } | sort -u )"
   local conflicts=0 touched=0
   local tmpb tmpt
   while IFS= read -r rel; do
     [[ -z "$rel" ]] && continue
     local in_base=0 in_theirs=0
-    blob_exists "$base"         "$source/$rel" && in_base=1
-    blob_exists "$UPSTREAM_REF" "$source/$rel" && in_theirs=1
+    blob_exists "$base" "$source/$rel" && in_base=1
+    blob_exists "$REF"  "$source/$rel" && in_theirs=1
 
-    # matt deleted the file: warn, don't touch
+    # upstream deleted the file: warn, don't touch
     if [[ $in_base -eq 1 && $in_theirs -eq 0 ]]; then
-      echo "  ${c_yel}matt deleted '$rel' — leaving it intact in your copy, delete it yourself if you want.${c_off}"
+      echo "  ${c_yel}upstream deleted '$rel' — leaving it intact in your copy, delete it yourself if you want.${c_off}"
       continue
     fi
 
@@ -154,21 +269,21 @@ cmd_update(){
     mkdir -p "$(dirname "$dest")"
     tmpb="$(mktemp)"; tmpt="$(mktemp)"
     [[ $in_base -eq 1 ]] && git show "$base:$source/$rel" > "$tmpb" || : > "$tmpb"
-    git show "$UPSTREAM_REF:$source/$rel" > "$tmpt"
+    git show "$REF:$source/$rel" > "$tmpt"
 
     if [[ ! -f "$dest" ]]; then
-      # doesn't exist in your copy: bring it from matt verbatim
-      cp "$tmpt" "$dest"; echo "  ${c_grn}+ $rel${c_off} (new from matt)"; touched=$((touched+1))
+      # doesn't exist in your copy: bring it from the upstream verbatim
+      cp "$tmpt" "$dest"; echo "  ${c_grn}+ $rel${c_off} (new from upstream)"; touched=$((touched+1))
       rm -f "$tmpb" "$tmpt"; continue
     fi
 
     if [[ "$mode" == "pure" ]]; then
-      cp "$tmpt" "$dest"; echo "  ${c_grn}~ $rel${c_off} (pure: overwritten with matt)"; touched=$((touched+1))
+      cp "$tmpt" "$dest"; echo "  ${c_grn}~ $rel${c_off} (pure: overwritten with upstream)"; touched=$((touched+1))
       rm -f "$tmpb" "$tmpt"; continue
     fi
 
     # modified: 3-way merge onto your file
-    if git merge-file -L "yours" -L "base(matt $base)" -L "matt($UPSTREAM_REF)" "$dest" "$tmpb" "$tmpt"; then
+    if git merge-file -L "yours" -L "base($base)" -L "upstream($REF)" "$dest" "$tmpb" "$tmpt"; then
       echo "  ${c_grn}~ $rel${c_off} (clean merge)"
     else
       echo "  ${c_red}! $rel — CONFLICT, resolve it by hand (look for <<<<<<<).${c_off}"
@@ -186,59 +301,183 @@ cmd_update(){
   fi
 }
 
+# Register an origin in the catalog. Adopts nothing — that's `add`'s job. Keeping
+# origin-registration separate from adoption means a URL typo can never spawn a
+# near-duplicate origin. After this, run `sync-remotes` to create the
+# upstream-<key> remote, then `add <key> <source>` to adopt skills from it.
+cmd_upstream_add(){
+  local key="${1:-}" url="${2:-}" branch="${3:-}"
+  [[ -n "$key" && -n "$url" ]] || { echo "usage: skills-upstream upstream-add <key> <url> [branch]" >&2; exit 1; }
+
+  # The key namespaces every fork's manifest key as <key>:<name>; a ':' or
+  # whitespace in it would corrupt that scheme.
+  [[ "$key" =~ ^[A-Za-z0-9._-]+$ ]] || {
+    echo "${c_red}Invalid upstream key '$key'.${c_off} Use letters, digits, '.', '_' or '-' only." >&2; exit 1; }
+
+  if jq -e --arg k "$key" '.upstreams | has($k)' "$MANIFEST" >/dev/null 2>&1; then
+    echo "${c_red}Upstream '$key' is already registered${c_off} ${c_dim}($(jq -r --arg k "$key" '.upstreams[$k].url' "$MANIFEST"))${c_off}." >&2
+    echo "${c_dim}Edit upstream.lock.json to change its URL.${c_off}" >&2
+    exit 1
+  fi
+
+  local tmp; tmp="$(mktemp)"
+  if [[ -n "$branch" ]]; then
+    jq --arg k "$key" --arg u "$url" --arg b "$branch" \
+       '.upstreams[$k] = {url:$u, branch:$b}' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  else
+    # branch omitted: no `branch` field, so the ref follows the remote's default HEAD
+    jq --arg k "$key" --arg u "$url" \
+       '.upstreams[$k] = {url:$u}' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  fi
+
+  printf "%sRegistered upstream '%s'%s %s→ %s%s" "$c_grn" "$key" "$c_off" "$c_dim" "$url" "$c_off"
+  [[ -n "$branch" ]] && printf " %s(branch: %s)%s" "$c_dim" "$branch" "$c_off"
+  printf ".\n"
+  echo "Make its remote available: skills-upstream sync-remotes"
+  echo "Then adopt skills from it:  skills-upstream add $key <source>"
+}
+
 cmd_add(){
-  needs_upstream
-  # add <source-in-matt> [mine] [mode]
-  local source="$1"
-  local name; name="$(basename "$source")"
-  local mine="${2:-skills/productivity/$name}"
-  local mode="${3:-pure}"
+  # add <key> <source> [mine] [mode] — adopt from an ALREADY-registered upstream.
+  local key="${1:-}" source="${2:-}"
+  [[ -n "$key" && -n "$source" ]] || { echo "usage: skills-upstream add <key> <source> [mine] [pure|modified]" >&2; exit 1; }
+  local mine_arg="${3:-}" mode="${4:-pure}"
 
   [[ "$mode" == "pure" || "$mode" == "modified" ]] || { echo "${c_red}mode must be 'pure' or 'modified'.${c_off}" >&2; exit 1; }
 
-  # 1) the skill exists in matt
-  blob_exists "$UPSTREAM_REF" "$source/SKILL.md" || {
-    echo "${c_red}Can't find '$source/SKILL.md' in $UPSTREAM_REF.${c_off} Run 'git fetch upstream' and check the path." >&2; exit 1; }
+  # 1) the upstream must already be registered — origin-registration is a
+  #    separate, deliberate step (upstream-add), so adoption is explicit about
+  #    where it's borrowing from.
+  jq -e --arg k "$key" '.upstreams | has($k)' "$MANIFEST" >/dev/null 2>&1 || {
+    echo "${c_red}Upstream '$key' isn't registered.${c_off}" >&2
+    echo "${c_dim}Register its origin first: skills-upstream upstream-add $key <url> [branch]${c_off}" >&2
+    exit 1; }
 
-  # 2) name not already registered
-  exists "$name" && { echo "${c_red}Already tracking a skill named '$name'. Use 'update $name'.${c_off}" >&2; exit 1; }
+  need_upstream_ref "$key"   # sets REF / REMOTE
 
-  # 3) the name (folder) must be unique: install.sh flattens by name
-  local clash; clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d -name "$name" | head -1)"
-  [[ -n "$clash" ]] && { echo "${c_red}A skill folder '$name' already exists at ${clash#$REPO/}.${c_off} Pick another name with the 2nd argument." >&2; exit 1; }
+  local name; name="$(basename "$source")"
+  local mkey="$key:$name"
 
-  # 4) destination must not exist
+  # 2) the skill exists in the upstream at the resolved ref
+  blob_exists "$REF" "$source/SKILL.md" || {
+    echo "${c_red}Can't find '$source/SKILL.md' in $REF.${c_off} Run 'skills-upstream sync-remotes' and check the path." >&2; exit 1; }
+
+  # 3) key collision WITHIN this upstream. Cross-upstream homonyms never collide
+  #    (keys are namespaced <upstream>:<name>). Re-adding the very same source is
+  #    a no-op error (use update); a *different* source that shares the basename
+  #    is the rare genuine clash — ask for an explicit suffix to disambiguate.
+  if exists "$mkey"; then
+    if [[ "$(field "$mkey" source)" == "$source" ]]; then
+      echo "${c_red}Already tracking '$mkey'.${c_off} Use 'update $mkey'." >&2; exit 1
+    fi
+    echo "${c_yel}'$mkey' already names a different source ($(field "$mkey" source)).${c_off}" >&2
+    printf "Enter a suffix to disambiguate (e.g. '2' → %s:%s-2), or leave empty to abort: " "$key" "$name" >&2
+    local suffix; read -r suffix || true
+    [[ -n "$suffix" ]] || { echo "${c_red}No suffix given — aborted.${c_off}" >&2; exit 1; }
+    name="$name-$suffix"
+    mkey="$key:$name"
+    exists "$mkey" && { echo "${c_red}'$mkey' is also taken.${c_off} Pick another suffix." >&2; exit 1; }
+  fi
+
+  local mine="${mine_arg:-skills/productivity/$name}"
+
+  # 4) the destination folder name must be unique: install.sh flattens every
+  #    skill to ~/.claude/skills/<folder>, so two folders sharing a basename clash.
+  local folder; folder="$(basename "$mine")"
+  local clash; clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d -name "$folder" | head -1)"
+  [[ -n "$clash" ]] && { echo "${c_red}A skill folder '$folder' already exists at ${clash#$REPO/}.${c_off} Pick another name with the 'mine' argument." >&2; exit 1; }
+
+  # 5) destination must not exist
   [[ -e "$REPO/$mine" ]] && { echo "${c_red}'$mine' already exists.${c_off} Not overwriting anything." >&2; exit 1; }
 
-  # 5) copy all of matt's files into your structure
+  # 6) copy all of the upstream's files into your structure
   mkdir -p "$REPO/$mine"
-  local rels; rels="$(files_at "$UPSTREAM_REF" "$source")"
+  local rels; rels="$(files_at "$REF" "$source")"
   while IFS= read -r rel; do
     [[ -z "$rel" ]] && continue
     mkdir -p "$REPO/$mine/$(dirname "$rel")"
-    git show "$UPSTREAM_REF:$source/$rel" > "$REPO/$mine/$rel"
+    git show "$REF:$source/$rel" > "$REPO/$mine/$rel"
     echo "  ${c_grn}+ $mine/$rel${c_off}"
   done <<< "$rels"
 
-  # 6) register in the manifest, base = current upstream
-  local newbase; newbase="$(git rev-parse --short "$UPSTREAM_REF")"
+  # 7) register in the manifest, base = current upstream ref
+  local newbase; newbase="$(git rev-parse --short "$REF")"
   local tmp; tmp="$(mktemp)"
-  jq --arg k "$name" --arg mine "$mine" --arg src "$source" --arg b "$newbase" --arg m "$mode" \
-     '.skills[$k] = {mine:$mine, source:$src, base:$b, mode:$m}' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  jq --arg k "$mkey" --arg up "$key" --arg mine "$mine" --arg src "$source" --arg b "$newbase" --arg m "$mode" \
+     '.skills[$k] = {upstream:$up, mine:$mine, source:$src, base:$b, mode:$m}' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
 
   echo
-  echo "${c_grn}Adopted '$name' from '$source' (base $newbase, mode $mode).${c_off}"
-  echo "Review its frontmatter ('name:' will be matt's; that's the name you'll invoke it with)."
+  echo "${c_grn}Adopted '$mkey' from '$key:$source' (base $newbase, mode $mode).${c_off}"
+  echo "Review its frontmatter ('name:' is the upstream's; that's the name you'll invoke it with)."
   [[ "$mode" == "pure" ]] && echo "${c_dim}If you modify it, switch its mode to 'modified' in upstream.lock.json so you don't lose your changes on the next update.${c_off}"
 }
 
 cmd_pin(){
-  needs_upstream
   require_skill "$1"
-  local newbase; newbase="$(git rev-parse --short "$UPSTREAM_REF")"
+  need_skill_ref "$1"
+  local newbase; newbase="$(git rev-parse --short "$REF")"
   local tmp; tmp="$(mktemp)"
   jq --arg k "$1" --arg b "$newbase" '.skills[$k].base = $b' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
   echo "${c_grn}'$1' pinned to base $newbase.${c_off}"
+}
+
+# Stop tracking ONE fork: drop its manifest entry, leave mine/ untouched. The
+# copy survives as a self-authored skill — the safe way to keep a borrowed skill
+# while severing its link to the upstream.
+cmd_detach(){
+  require_skill "$1"
+  local mine; mine="$(field "$1" mine)"
+  local tmp; tmp="$(mktemp)"
+  jq --arg k "$1" 'del(.skills[$k])' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  echo "${c_grn}Detached '$1'.${c_off} Its copy stays at ${c_dim}$mine${c_off} (now self-authored)."
+}
+
+# Remove an origin from the catalog and drop its git remote. If forks still point
+# at it, list them and ask (stdin) whether to keep them as self-authored: on 'y'
+# detach each (mine/ intact) then remove the origin + remote; on 'n'/empty abort
+# touching nothing, so "no" is always safe.
+cmd_upstream_remove(){
+  local key="${1:-}"
+  [[ -n "$key" ]] || { echo "usage: skills-upstream upstream-remove <key>" >&2; exit 1; }
+  jq -e --arg k "$key" '.upstreams | has($k)' "$MANIFEST" >/dev/null 2>&1 || {
+    echo "${c_red}No such upstream '$key'.${c_off}" >&2; exit 1; }
+
+  local forks; forks="$(jq -r --arg u "$key" \
+    '.skills | to_entries | map(select(.value.upstream==$u)) | .[].key' "$MANIFEST")"
+
+  if [[ -n "$forks" ]]; then
+    echo "${c_yel}'$key' still has fork(s):${c_off}"
+    while IFS= read -r k; do
+      [[ -z "$k" ]] && continue
+      echo "  $k ${c_dim}→ $(field "$k" mine)${c_off}"
+    done <<< "$forks"
+    printf "Detach each (keep mine/ intact, becomes self-authored) and remove '%s'? [y/N]: " "$key" >&2
+    local reply; read -r reply || true
+    if [[ "$reply" != "y" && "$reply" != "Y" ]]; then
+      echo "${c_dim}Aborted — manifest, files and remotes untouched.${c_off}"
+      exit 0
+    fi
+  fi
+
+  # Atomic: drop every fork of this upstream (mine/ left intact) AND the catalog
+  # entry in one rewrite, so an interrupt can't leave a half-removed manifest.
+  local tmp; tmp="$(mktemp)"
+  jq --arg u "$key" \
+     '(.skills |= with_entries(select(.value.upstream != $u))) | del(.upstreams[$u])' \
+     "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+
+  if [[ -n "$forks" ]]; then
+    while IFS= read -r k; do
+      [[ -z "$k" ]] && continue
+      echo "  ${c_grn}detached $k${c_off} ${c_dim}(copy kept)${c_off}"
+    done <<< "$forks"
+  fi
+
+  local remote; remote="$(up_remote "$key")"
+  if git remote get-url "$remote" >/dev/null 2>&1; then
+    git remote remove "$remote" >/dev/null 2>&1 && echo "  ${c_grn}removed remote $remote${c_off}"
+  fi
+  echo "${c_grn}Removed upstream '$key'.${c_off}"
 }
 
 # Whole-manifest sanity check. Offline checks always run; upstream checks run only
@@ -307,26 +546,34 @@ cmd_doctor(){
   done <<< "$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d | sort)"
   [[ $untracked -eq 0 ]] && echo "$ok every skill folder is tracked"
 
-  # --- upstream checks (only if we can resolve the ref) ---
+  # --- upstream checks, grouped per origin: remote present, ref resolves, then
+  #     each fork's source still alive and base in that origin's history ---
   echo
-  echo "${c_bld}Upstream${c_off} ($UPSTREAM_REF)"
-  if ! git rev-parse --verify --quiet "$UPSTREAM_REF" >/dev/null 2>&1; then
-    echo "$warn can't resolve $UPSTREAM_REF — skipping source/base checks."
-    echo "    ${c_dim}git remote add ${UPSTREAM_REF%%/*} $(jq -r '.upstream' "$MANIFEST") && git fetch ${UPSTREAM_REF%%/*}${c_off}"
-    warns=$((warns+1))
-  else
-    for k in $(skill_keys); do
+  echo "${c_bld}Upstreams${c_off}"
+  for up in $(jq -r '.upstreams | keys[]' "$MANIFEST"); do
+    local remote ref
+    remote="$(up_remote "$up")"; ref="$(up_ref "$up" 2>/dev/null || true)"
+    if ! git remote get-url "$remote" >/dev/null 2>&1; then
+      echo "$warn $up — '$remote' remote missing ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1)); continue
+    fi
+    if [[ -z "$ref" ]] || ! git rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
+      echo "$warn $up — can't resolve $remote's ref ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1)); continue
+    fi
+    echo "$ok $up ${c_dim}($ref)${c_off}"
+    for k in $(jq -r --arg u "$up" '.skills | to_entries | map(select(.value.upstream==$u)) | .[].key' "$MANIFEST"); do
       local base source
       base="$(field "$k" base)"; source="$(field "$k" source)"
-      if ! blob_exists "$UPSTREAM_REF" "$source/SKILL.md"; then
-        echo "$err $k — source gone from upstream: $source ${c_dim}(renamed? repoint or drop it)${c_off}"; errors=$((errors+1))
+      if ! blob_exists "$ref" "$source/SKILL.md"; then
+        echo "$err   $k — source gone: $source ${c_dim}(renamed? repoint or drop it)${c_off}"; errors=$((errors+1))
       elif ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
-        echo "$warn $k — base '$base' not in history ${c_dim}(run 'git fetch ${UPSTREAM_REF%%/*}')${c_off}"; warns=$((warns+1))
+        echo "$warn   $k — base '$base' not fetched ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1))
+      elif ! git merge-base --is-ancestor "$base" "$ref" 2>/dev/null; then
+        echo "$warn   $k — base '$base' not in $up history ${c_dim}(diverged? re-pin after review)${c_off}"; warns=$((warns+1))
       else
-        echo "$ok $k"
+        echo "$ok   $k"
       fi
     done
-  fi
+  done
 
   echo
   if [[ $errors -gt 0 ]]; then
@@ -339,16 +586,64 @@ cmd_doctor(){
   fi
 }
 
-usage(){ sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+# Reconcile git remotes from the upstreams catalog. Idempotent: add missing
+# remotes, fix changed URLs, fetch every upstream, and record each remote's
+# default HEAD so `branch`-less upstreams resolve to it. The catalog is the
+# source of truth; stray remotes not in it are left alone (upstream-remove's job).
+cmd_sync_remotes(){
+  local keys; keys="$(jq -r '.upstreams | keys[]' "$MANIFEST")"
+  local added=0 updated=0 failed=0
+
+  # 1) add missing remotes / fix changed URLs
+  for key in $keys; do
+    local remote url cur
+    remote="$(up_remote "$key")"
+    url="$(jq -r --arg k "$key" '.upstreams[$k].url' "$MANIFEST")"
+    if ! cur="$(git remote get-url "$remote" 2>/dev/null)"; then
+      git remote add "$remote" "$url"
+      echo "  ${c_grn}+ added $remote${c_off} ${c_dim}→ $url${c_off}"; added=$((added+1))
+    elif [[ "$cur" != "$url" ]]; then
+      git remote set-url "$remote" "$url"
+      echo "  ${c_yel}~ updated $remote URL${c_off} ${c_dim}→ $url${c_off}"; updated=$((updated+1))
+    fi
+  done
+
+  # 2) fetch all + record each remote's default HEAD
+  for key in $keys; do
+    local remote; remote="$(up_remote "$key")"
+    if ! git fetch --quiet "$remote" 2>/dev/null; then
+      echo "  ${c_red}! fetch failed for $remote${c_off}"; failed=$((failed+1)); continue
+    fi
+    git remote set-head "$remote" -a >/dev/null 2>&1 || true
+    local branch; branch="$(up_branch "$key")"
+    echo "  ${c_grn}✓ $remote${c_off} ${c_dim}(ref: $remote/${branch:-<unresolved>})${c_off}"
+  done
+
+  echo
+  if [[ $failed -gt 0 ]]; then
+    echo "${c_yel}$added added, $updated url-updated, $failed fetch failure(s).${c_off}"
+    exit 1
+  elif [[ $added -eq 0 && $updated -eq 0 ]]; then
+    echo "${c_grn}Remotes already in sync with the catalog.${c_off}"
+  else
+    echo "${c_grn}Synced: $added added, $updated url-updated.${c_off}"
+  fi
+}
+
+usage(){ sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
-  status) cmd_status ;;
-  doctor) cmd_doctor ;;
-  list)   cmd_list ;;
-  diff)   shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream diff <skill>" >&2; exit 1; }; cmd_diff "$1" ;;
-  update) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream update <skill>" >&2; exit 1; }; cmd_update "$1" ;;
-  pin)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream pin <skill>" >&2; exit 1; }; cmd_pin "$1" ;;
-  add)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream add <source-in-matt> [mine] [pure|modified]" >&2; exit 1; }; cmd_add "$@" ;;
+  sync-remotes) cmd_sync_remotes ;;
+  status)       shift; cmd_status "${1:-}" ;;
+  doctor)       cmd_doctor ;;
+  list)         cmd_list ;;
+  diff)   shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream diff <key>" >&2; exit 1; }; cmd_diff "$1" ;;
+  update) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream update <key>" >&2; exit 1; }; cmd_update "$1" ;;
+  pin)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream pin <key>" >&2; exit 1; }; cmd_pin "$1" ;;
+  upstream-add) shift; cmd_upstream_add "$@" ;;
+  upstream-remove) shift; cmd_upstream_remove "$@" ;;
+  detach) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream detach <upstream>:<name>" >&2; exit 1; }; cmd_detach "$1" ;;
+  add)    shift; cmd_add "$@" ;;
   ""|-h|--help|help) usage ;;
   *) echo "Unknown command: $1" >&2; usage; exit 1 ;;
 esac
