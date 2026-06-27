@@ -14,7 +14,7 @@
 #   update <skill>    apply matt's changes to your copy (3-way merge)
 #   pin <skill>       set base = current upstream after reviewing/merging
 #   add <source> [mine] [mode]   adopt a NEW skill from matt and register it
-#   list              dump the manifest
+#   list              dump the manifest, forks grouped by upstream
 #   doctor            sanity-check the manifest, paths, name collisions, upstream
 #
 # The 3-way merge works off git blobs, so it works even when matt's path is
@@ -22,7 +22,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MANIFEST="$REPO/upstream.lock.json"
+MANIFEST="${SKILLS_MANIFEST:-$REPO/upstream.lock.json}"
 UPSTREAM_REF="${SKILLS_UPSTREAM_REF:-upstream/main}"
 
 command -v jq >/dev/null || { echo "jq is missing." >&2; exit 1; }
@@ -34,6 +34,25 @@ c_red=$'\033[31m'; c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_bld
 if ! jq -e . "$MANIFEST" >/dev/null 2>&1; then
   echo "${c_red}$MANIFEST is not valid JSON.${c_off}" >&2
   echo "${c_dim}Find the syntax error with: jq . upstream.lock.json${c_off}" >&2
+  exit 1
+fi
+
+# This tool understands ONLY the multi-upstream schema: a top-level `upstreams`
+# catalog plus per-fork `upstream` keys. The legacy single-`upstream` string is
+# rejected loudly so we never run against a half-migrated manifest.
+# See docs/adr/0001-multiple-upstreams.md.
+if [[ "$(jq -r 'has("upstream")' "$MANIFEST")" == "true" ]]; then
+  echo "${c_red}$MANIFEST uses the legacy single-upstream schema.${c_off}" >&2
+  echo "${c_dim}The top-level \"upstream\" string is no longer supported. Migrate to the new${c_off}" >&2
+  echo "${c_dim}multi-upstream schema: move the url under \"upstreams.<key>.url\", give every${c_off}" >&2
+  echo "${c_dim}fork an \"upstream\" field, and namespace its key as \"<upstream>:<name>\".${c_off}" >&2
+  echo "${c_dim}See docs/adr/0001-multiple-upstreams.md.${c_off}" >&2
+  exit 1
+fi
+if [[ "$(jq -r '.upstreams | type' "$MANIFEST")" != "object" ]]; then
+  echo "${c_red}$MANIFEST is missing the \"upstreams\" catalog.${c_off}" >&2
+  echo "${c_dim}Expected a top-level \"upstreams\" object mapping <key> to { url, branch? }.${c_off}" >&2
+  echo "${c_dim}See docs/adr/0001-multiple-upstreams.md.${c_off}" >&2
   exit 1
 fi
 
@@ -76,11 +95,47 @@ has_upstream_changes(){ # <base> <source>
   ! git diff --quiet "$1" "$UPSTREAM_REF" -- "$2" 2>/dev/null
 }
 
+# Forks grouped under their origin. The first column is the tool-facing manifest
+# key (<upstream>:<name>) you pass to other commands — NOT the invocable name,
+# which comes from each skill's SKILL.md frontmatter.
 cmd_list(){
-  printf "%-32s %-42s %-9s %s\n" "SKILL" "SOURCE (matt)" "BASE" "MODE"
-  for k in $(skill_keys); do
-    printf "%-32s %-42s %-9s %s\n" "$k" "$(field "$k" source)" "$(field "$k" base)" "$(field "$k" mode)"
+  local shown=""
+  for up in $(jq -r '.upstreams | keys[]' "$MANIFEST"); do
+    local url branch
+    url="$(jq -r --arg u "$up" '.upstreams[$u].url' "$MANIFEST")"
+    branch="$(jq -r --arg u "$up" '.upstreams[$u].branch // empty' "$MANIFEST")"
+    printf "%s%s%s  %s%s%s" "$c_bld" "$up" "$c_off" "$c_dim" "$url" "$c_off"
+    [[ -n "$branch" ]] && printf " %s(branch: %s)%s" "$c_dim" "$branch" "$c_off"
+    printf "\n"
+
+    local keys; keys="$(jq -r --arg u "$up" \
+      '.skills | to_entries | map(select(.value.upstream == $u)) | .[].key' "$MANIFEST")"
+    if [[ -z "$keys" ]]; then
+      printf "  %s(no forks)%s\n" "$c_dim" "$c_off"
+    else
+      printf "  %-30s %-42s %-9s %s\n" "KEY" "SOURCE" "BASE" "MODE"
+      for k in $keys; do
+        printf "  %-30s %-42s %-9s %s\n" "$k" "$(field "$k" source)" "$(field "$k" base)" "$(field "$k" mode)"
+        shown+="$k"$'\n'
+      done
+    fi
+    echo
   done
+
+  # A fork whose 'upstream' isn't in the catalog would silently vanish above;
+  # surface it instead of dropping it on the floor.
+  local orphans=""
+  for k in $(skill_keys); do
+    grep -qxF "$k" <<< "$shown" || orphans+="$k"$'\n'
+  done
+  if [[ -n "${orphans//[$'\n']/}" ]]; then
+    printf "%s(no registered upstream)%s\n" "$c_yel" "$c_off"
+    printf "  %-30s %-42s %-9s %s\n" "KEY" "SOURCE" "BASE" "MODE"
+    while IFS= read -r k; do
+      [[ -z "$k" ]] && continue
+      printf "  %s%-30s%s %-42s %-9s %s\n" "$c_yel" "$k" "$c_off" "$(field "$k" source)" "$(field "$k" base)" "$(field "$k" mode)"
+    done <<< "$orphans"
+  fi
 }
 
 cmd_status(){
