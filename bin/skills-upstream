@@ -228,7 +228,8 @@ cmd_diff(){
   require_skill "$1"
   need_skill_ref "$1"
   local base source; base="$(field "$1" base)"; source="$(field "$1" source)"
-  blob_exists "$REF" "$source/SKILL.md" || { echo "${c_yel}'$source' no longer exists in $REF.${c_off}"; exit 0; }
+  blob_exists "$REF" "$source/SKILL.md" || {
+    echo "${c_red}'$source' no longer exists in $REF — the upstream deleted/renamed it.${c_off}" >&2; exit 1; }
   git --no-pager diff "$base" "$REF" -- "$source"
 }
 
