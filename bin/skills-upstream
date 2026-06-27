@@ -10,7 +10,7 @@
 #
 # Commands:
 #   sync-remotes      reconcile git remotes from the upstreams catalog (idempotent)
-#   status            which forks did their upstream touch since their base?
+#   status [<key>]    which forks did their upstream touch? (grouped; one origin if <key>)
 #   diff <key>        show the upstream change (base..ref) for that fork
 #   update <key>      apply the upstream change to your copy (3-way merge)
 #   pin <key>         set base = current upstream ref after reviewing/merging
@@ -166,30 +166,57 @@ cmd_list(){
   fi
 }
 
-cmd_status(){
-  local changed=0 unresolved=0
-  for k in $(skill_keys); do
-    local up base source mode ref
-    up="$(field "$k" upstream)"; base="$(field "$k" base)"; source="$(field "$k" source)"; mode="$(field "$k" mode)"
-    ref="$(up_ref "$up" 2>/dev/null || true)"
+# Walk every upstream (or one if filtered), grouped by origin with a per-origin
+# header and its short ref. A missing/unresolvable remote degrades gracefully:
+# report it, suggest sync-remotes, and keep walking the other origins.
+cmd_status(){ # [<upstream-key>]
+  local filter="${1:-}"
+  local ups; ups="$(jq -r '.upstreams | keys[]' "$MANIFEST")"
+  if [[ -n "$filter" ]]; then
+    jq -e --arg k "$filter" '.upstreams | has($k)' "$MANIFEST" >/dev/null \
+      || { echo "${c_red}No such upstream '$filter'.${c_off} Known: $(echo $ups | tr '\n' ' ')" >&2; exit 1; }
+    ups="$filter"
+  fi
+
+  local changed=0 degraded=0 first=1
+  for up in $ups; do
+    [[ $first -eq 1 ]] || echo; first=0
+    local remote ref; remote="$(up_remote "$up")"; ref="$(up_ref "$up" 2>/dev/null || true)"
+
     if [[ -z "$ref" ]] || ! git rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
-      printf "  %s%-32s%s %scan't resolve %s — run sync-remotes%s\n" "$c_yel" "$k" "$c_off" "$c_yel" "$(up_remote "$up")" "$c_off"
-      unresolved=$((unresolved+1)); continue
+      printf "%s%s%s %s— remote unavailable%s\n" "$c_bld" "$up" "$c_off" "$c_yel" "$c_off"
+      if ! git remote get-url "$remote" >/dev/null 2>&1; then
+        echo "  ${c_yel}'$remote' remote is missing — run 'skills-upstream sync-remotes'.${c_off}"
+      else
+        echo "  ${c_yel}can't resolve $remote's ref — run 'skills-upstream sync-remotes'.${c_off}"
+      fi
+      degraded=$((degraded+1)); continue
     fi
-    if ! blob_exists "$ref" "$source/SKILL.md"; then
-      printf "  %s%-32s%s %sGONE from %s (renamed?)%s\n" "$c_yel" "$k" "$c_off" "$c_yel" "$up" "$c_off"
-      continue
-    fi
-    if has_upstream_changes "$ref" "$base" "$source"; then
-      local n; n="$(git diff --numstat "$base" "$ref" -- "$source" | awk '{a+=$1;d+=$2} END{print a"+/"d"-"}')"
-      printf "  %s%-32s%s changes (%s)  %s[%s]%s\n" "$c_yel" "$k" "$c_off" "$n" "$c_dim" "$mode" "$c_off"
-      changed=$((changed+1))
-    else
-      printf "  %s%-32s%s up to date%s\n" "$c_grn" "$k" "$c_off" "$c_off"
-    fi
+
+    local short; short="$(git rev-parse --short "$ref")"
+    printf "%s%s%s %s($ref @ %s)%s\n" "$c_bld" "$up" "$c_off" "$c_dim" "$short" "$c_off"
+
+    local keys; keys="$(jq -r --arg u "$up" '.skills | to_entries | map(select(.value.upstream==$u)) | .[].key' "$MANIFEST")"
+    if [[ -z "$keys" ]]; then echo "  ${c_dim}(no forks)${c_off}"; continue; fi
+    for k in $keys; do
+      local base source mode
+      base="$(field "$k" base)"; source="$(field "$k" source)"; mode="$(field "$k" mode)"
+      if ! blob_exists "$ref" "$source/SKILL.md"; then
+        printf "  %s%-32s%s %sGONE from %s (renamed?)%s\n" "$c_yel" "$k" "$c_off" "$c_yel" "$up" "$c_off"
+        continue
+      fi
+      if has_upstream_changes "$ref" "$base" "$source"; then
+        local n; n="$(git diff --numstat "$base" "$ref" -- "$source" | awk '{a+=$1;d+=$2} END{print a"+/"d"-"}')"
+        printf "  %s%-32s%s changes (%s)  %s[%s]%s\n" "$c_yel" "$k" "$c_off" "$n" "$c_dim" "$mode" "$c_off"
+        changed=$((changed+1))
+      else
+        printf "  %s%-32s%s up to date%s\n" "$c_grn" "$k" "$c_off" "$c_off"
+      fi
+    done
   done
+
   echo
-  [[ $unresolved -gt 0 ]] && echo "${c_yel}$unresolved fork(s) with an unresolved upstream — run 'skills-upstream sync-remotes'.${c_off}"
+  [[ $degraded -gt 0 ]] && echo "${c_yel}$degraded upstream(s) unavailable — run 'skills-upstream sync-remotes'.${c_off}"
   if [[ $changed -eq 0 ]]; then
     echo "${c_grn}Everything up to date.${c_off}"
   else
@@ -399,23 +426,33 @@ cmd_doctor(){
   done <<< "$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d | sort)"
   [[ $untracked -eq 0 ]] && echo "$ok every skill folder is tracked"
 
-  # --- upstream checks (per fork, against its own origin's resolved ref) ---
+  # --- upstream checks, grouped per origin: remote present, ref resolves, then
+  #     each fork's source still alive and base in that origin's history ---
   echo
   echo "${c_bld}Upstreams${c_off}"
-  for k in $(skill_keys); do
-    local up base source ref
-    up="$(field "$k" upstream)"; base="$(field "$k" base)"; source="$(field "$k" source)"
-    ref="$(up_ref "$up" 2>/dev/null || true)"
+  for up in $(jq -r '.upstreams | keys[]' "$MANIFEST"); do
+    local remote ref
+    remote="$(up_remote "$up")"; ref="$(up_ref "$up" 2>/dev/null || true)"
+    if ! git remote get-url "$remote" >/dev/null 2>&1; then
+      echo "$warn $up — '$remote' remote missing ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1)); continue
+    fi
     if [[ -z "$ref" ]] || ! git rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
-      echo "$warn $k — can't resolve $(up_remote "$up") ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1)); continue
+      echo "$warn $up — can't resolve $remote's ref ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1)); continue
     fi
-    if ! blob_exists "$ref" "$source/SKILL.md"; then
-      echo "$err $k — source gone from $up: $source ${c_dim}(renamed? repoint or drop it)${c_off}"; errors=$((errors+1))
-    elif ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
-      echo "$warn $k — base '$base' not in $up history ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1))
-    else
-      echo "$ok $k"
-    fi
+    echo "$ok $up ${c_dim}($ref)${c_off}"
+    for k in $(jq -r --arg u "$up" '.skills | to_entries | map(select(.value.upstream==$u)) | .[].key' "$MANIFEST"); do
+      local base source
+      base="$(field "$k" base)"; source="$(field "$k" source)"
+      if ! blob_exists "$ref" "$source/SKILL.md"; then
+        echo "$err   $k — source gone: $source ${c_dim}(renamed? repoint or drop it)${c_off}"; errors=$((errors+1))
+      elif ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
+        echo "$warn   $k — base '$base' not fetched ${c_dim}(run 'skills-upstream sync-remotes')${c_off}"; warns=$((warns+1))
+      elif ! git merge-base --is-ancestor "$base" "$ref" 2>/dev/null; then
+        echo "$warn   $k — base '$base' not in $up history ${c_dim}(diverged? re-pin after review)${c_off}"; warns=$((warns+1))
+      else
+        echo "$ok   $k"
+      fi
+    done
   done
 
   echo
@@ -477,7 +514,7 @@ usage(){ sed -n '2,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
   sync-remotes) cmd_sync_remotes ;;
-  status)       cmd_status ;;
+  status)       shift; cmd_status "${1:-}" ;;
   doctor)       cmd_doctor ;;
   list)         cmd_list ;;
   diff)   shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream diff <key>" >&2; exit 1; }; cmd_diff "$1" ;;
