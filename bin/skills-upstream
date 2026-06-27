@@ -608,10 +608,12 @@ cmd_sync_remotes(){
     fi
   done
 
-  # 2) fetch all + record each remote's default HEAD
+  # 2) fetch all + record each remote's default HEAD. --no-tags: we adopt skills
+  # via 3-way merge, not the upstream's release tags — auto-following them would
+  # pollute the user's repo (and clobber same-named tags of their own).
   for key in $keys; do
     local remote; remote="$(up_remote "$key")"
-    if ! git fetch --quiet "$remote" 2>/dev/null; then
+    if ! git fetch --quiet --no-tags "$remote" 2>/dev/null; then
       echo "  ${c_red}! fetch failed for $remote${c_off}"; failed=$((failed+1)); continue
     fi
     git remote set-head "$remote" -a >/dev/null 2>&1 || true
