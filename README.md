@@ -1,14 +1,70 @@
-# Personal Development Harness
+<div align="center">
 
-A set of independent Claude Code skills that turn vague tasks into shipped code with a disciplined, conscious workflow. No vibe coding.
+<pre>
+ ____              __      _       ____  _    _ _ _     
+|  _ \ ___  _ __  / _| ___( )___  / ___|| | _(_) | |___ 
+| |_) / _ \| '_ \| |_ / _ \// __| \___ \| |/ / | | / __|
+|  __/ (_) | | | |  _|  __/ \__ \  ___) |   &lt;| | | \__ \
+|_|   \___/|_| |_|_|  \___| |___/ |____/|_|\_\_|_|_|___/
+</pre>
 
-The harness lives in `~/.claude/`. Skills run entirely in the conversation and write nothing to disk unless you explicitly ask, so client repositories stay completely clean.
+**A personal development harness for Claude Code.**
+
+A curated set of independent skills that turn vague tasks into shipped code with a disciplined, conscious workflow — _no vibe coding_.
+
+</div>
+
+The harness lives in `~/.claude/`. Skills run entirely in the conversation and write nothing to disk unless you explicitly ask, so client repositories stay completely clean. Many skills are **adopted from other creators and adapted to my own needs** — with tooling to keep them in sync without ever losing my changes (see [Why this exists](#why-this-exists)).
+
+---
+
+## Contents
+
+- [Why this exists](#why-this-exists) — the philosophy: own your skills, borrow the best, stay in control
+- [Installation](#installation) — get the skills into `~/.claude/`
+  - [Quick reference](#quick-reference--find-your-need) · [Uninstall](#uninstall)
+- [Maintenance — syncing with upstream](#maintenance--syncing-with-upstream) — pull other creators' updates without losing your edits
+  - [Quick reference](#quick-reference--find-your-need-1) · [How provenance is recorded](#how-provenance-is-recorded) · [One-time setup](#one-time-setup-fresh-clones) · [The `skills-upstream` tool](#the-tool-binskills-upstream) · [Adopting a new skill](#adopting-a-brand-new-skill-from-matt) · [Common scenarios](#common-scenarios)
+- [Stateless skills, conversational orchestration](#stateless-skills-conversational-orchestration) — how the skills are designed
+- [Skill catalog](#skill-catalog) — every skill and when to use it
+- [Credits](#credits) · [License](#license)
+
+---
+
+## Why this exists
+
+Skills are quickly becoming one of the highest-leverage ways to shape how Claude Code works. Brilliant people are publishing their own — but a raw fork has a problem: the moment you tweak someone's skill to fit your workflow, you either freeze it (and miss their improvements) or keep pulling (and clobber your edits). You end up depending 100% on an external source you can't safely change.
+
+This repo is built around a different stance: **borrow the best, but own what you run.**
+
+- **Adopt from anyone.** Skills here are adopted from other creators — today [Matt Pocock](https://github.com/mattpocock/skills), more in the future — and the [`skills-upstream`](#the-tool-binskills-upstream) tool makes adding a new one a single command.
+- **Adapt to your needs.** Every adopted skill is _my_ copy. I translate it, retune it, split it, or extend it freely — it's just files in this repo.
+- **Stay in sync without losing control.** Provenance is tracked per skill, so the tool can pull only what the original author changed and **3-way-merge** it into my version — surfacing real conflicts instead of overwriting my work. I decide, per skill, what to take and what to keep.
+- **Never depend 100% on something external.** If an upstream skill is renamed, deleted, or goes in a direction I don't like, my copy keeps working. Upstream is a source of ideas, not a dependency I'm chained to.
+
+The result: a harness that grows with the wider community **and** stays fully under my control. The [Maintenance](#maintenance--syncing-with-upstream) section is where that machinery lives.
 
 ---
 
 ## Installation
 
 > Just want the skills as they are today? This section is all you need. If you later want to pull Matt Pocock's newest changes into the skills forked from him, see [Maintenance](#maintenance--syncing-with-upstream).
+
+### Quick reference — find your need
+
+Run everything from the root of this repo.
+
+| I want to…                                              | Run                                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Pick exactly which skills to install** (interactive)  | `./install.sh`                                                       |
+| **Install everything**, no prompts (CI, pipes)          | `./install.sh --all`                                                 |
+| **Add skills I just adopted/updated** (re-run, safe)    | `./install.sh` — idempotent: links new ones, skips what's there      |
+| **Update a skill's content** after editing it           | nothing — skills are symlinks, edits in the repo apply instantly     |
+| **Keep my own version of a same-named skill**           | nothing — the installer skips it and leaves yours in place           |
+| **See the options**                                     | `./install.sh --help`                                               |
+| **Uninstall the harness**                               | see [Uninstall](#uninstall) below                                   |
+
+The rest of this section explains each of these in detail.
 
 From the root of this repo:
 
@@ -83,7 +139,26 @@ find ~/.claude -maxdepth 2 -type l -lname "*/skills/*" -delete
 
 Many skills here are **forked from [Matt Pocock's skills](https://github.com/mattpocock/skills)**, but this is not a git fork: the two repos share no common history, and upstream renames and moves skills freely. So a plain `git merge` is not an option. Instead, provenance is tracked **per skill** in [`upstream.lock.json`](./upstream.lock.json), and a small tool brings over only the changes you want — without clobbering your local edits.
 
-You only need this section if you want to keep your forked skills up to date with upstream. Skills you authored yourself (`implement`, `validate`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`) are **not** tracked and are never touched.
+You only need this section if you want to keep your forked skills up to date with upstream. Skills you authored yourself (`implement`, `validate`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
+
+### Quick reference — find your need
+
+Start here. Match what you want to do, run the command, and follow the deep-dive section below if you need the details. Almost everything starts with `git fetch upstream` so the comparison is against Matt's latest.
+
+| I want to…                                                  | Run                                                                 |
+| ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Check everything is healthy** (or just cloned the repo)   | `bin/skills-upstream doctor`                                        |
+| **See if Matt changed any of my forked skills**             | `git fetch upstream && bin/skills-upstream status`                  |
+| **Review what changed in one skill** before pulling         | `bin/skills-upstream diff <skill>`                                  |
+| **Pull Matt's changes into one skill**                      | `bin/skills-upstream update <skill>` → resolve conflicts → `pin <skill>` |
+| **Catch up several skills at once**                         | `for s in tdd handoff to-prd; do bin/skills-upstream update "$s"; done` |
+| **Mark a skill as fully synced** (lock in the new base)     | `bin/skills-upstream pin <skill>`                                   |
+| **Adopt a brand-new skill Matt just shipped**               | `bin/skills-upstream add <source-in-matt>`                          |
+| **See which of my skills aren't tracked**                   | `bin/skills-upstream doctor` (Tracking coverage section)            |
+| **List all tracked forks** (source, base, mode)             | `bin/skills-upstream list`                                          |
+| **Something looks broken / cryptic error**                  | `bin/skills-upstream doctor` (it pinpoints the exact problem)       |
+
+> `<skill>` is the name in the left column of `list` (e.g. `teach`, `tdd`). `<source-in-matt>` is a path inside Matt's repo (e.g. `skills/engineering/prototype`).
 
 ### How provenance is recorded
 
@@ -110,7 +185,10 @@ The tool compares against the `upstream` remote. If you cloned this repo, add it
 ```bash
 git remote add upstream https://github.com/mattpocock/skills.git
 git fetch upstream
+bin/skills-upstream doctor   # confirms the manifest, paths and remote are all healthy
 ```
+
+`doctor` is the first thing to run whenever something looks off — it works even before the remote is added (it just skips the upstream-only checks and tells you the exact command to add it).
 
 ### The tool: `bin/skills-upstream`
 
@@ -118,6 +196,7 @@ It runs only in this authoring repo (it needs `jq` and the git history); it neve
 
 | Command                       | What it does                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------- |
+| `bin/skills-upstream doctor`  | Sanity-checks the whole manifest: valid JSON, every `mine` path exists, no installer name collisions, which folders are untracked, and (if `upstream` is fetched) that every `source`/`base` still resolves. Run it first when something looks off. |
 | `bin/skills-upstream status`  | For each tracked fork, shows whether Matt changed it since your `base`.       |
 | `bin/skills-upstream list`    | Dumps the manifest (source path, base, mode per skill).                       |
 | `bin/skills-upstream diff <skill>`   | Shows Matt's changes for that fork (`base..upstream/main`).            |
@@ -218,7 +297,7 @@ Skills fall into two categories: **engineer** — the disciplined inner loop fro
 | [`commit`](./skills/engineer/commit/SKILL.md)               | Splitting a dirty working tree into an ordered list of atomic conventional commits — plans from `git diff HEAD`, commits only on an explicit literal OK. |
 | [`handoff`](./skills/engineer/handoff/SKILL.md)             | Compacting the current conversation into a handoff document (saved to the OS temp dir) so a fresh agent can continue the work — references existing artifacts rather than duplicating them. |
 | [`handoff-grill`](./skills/engineer/handoff-grill/SKILL.md) | Pausing a `grill-me` session into a resumable handoff that preserves the open branches of the decision tree, not just the closed decisions — to continue later or hand to a teammate. |
-| [`domain-modeling`](./skills/productivity/domain-modeling/SKILL.md) | Actively building and sharpening the project's domain model — challenging terms and writing the glossary (`CONTEXT.md`) and decisions (ADRs) down the moment they crystallise. |
+| [`domain-modeling`](./skills/engineer/domain-modeling/SKILL.md) | Actively building and sharpening the project's domain model — challenging terms and writing the glossary (`CONTEXT.md`) and decisions (ADRs) down the moment they crystallise. |
 
 ### Productivity
 

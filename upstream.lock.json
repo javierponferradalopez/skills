@@ -13,7 +13,7 @@
       "source": "skills/engineering/grill-with-docs",
       "base": "78636f8",
       "mode": "modified"
-    }
+    },
     "tdd": {
       "mine": "skills/engineer/tdd",
       "source": "skills/engineering/tdd",
@@ -73,6 +73,6 @@
       "source": "skills/engineering/domain-modeling",
       "base": "8370e76",
       "mode": "pure"
-    },
+    }
   }
 }

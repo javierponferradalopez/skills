@@ -15,6 +15,7 @@
 #   pin <skill>       set base = current upstream after reviewing/merging
 #   add <source> [mine] [mode]   adopt a NEW skill from matt and register it
 #   list              dump the manifest
+#   doctor            sanity-check the manifest, paths, name collisions, upstream
 #
 # The 3-way merge works off git blobs, so it works even when matt's path is
 # renamed relative to yours. Runs only in the authoring repo.
@@ -28,6 +29,30 @@ command -v jq >/dev/null || { echo "jq is missing." >&2; exit 1; }
 [[ -f "$MANIFEST" ]] || { echo "Can't find $MANIFEST" >&2; exit 1; }
 
 c_red=$'\033[31m'; c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_bld=$'\033[1m'; c_off=$'\033[0m'
+
+# Fail loudly (not with a cryptic jq error mid-command) if the manifest is not valid JSON.
+if ! jq -e . "$MANIFEST" >/dev/null 2>&1; then
+  echo "${c_red}$MANIFEST is not valid JSON.${c_off}" >&2
+  echo "${c_dim}Find the syntax error with: jq . upstream.lock.json${c_off}" >&2
+  exit 1
+fi
+
+# The upstream remote is what every git-based command compares against. Without it,
+# git fails with an opaque message — catch it here with a fix the user can copy-paste.
+needs_upstream(){
+  local remote="${UPSTREAM_REF%%/*}"   # "upstream" out of "upstream/main"
+  if ! git rev-parse --verify --quiet "$UPSTREAM_REF" >/dev/null 2>&1; then
+    echo "${c_red}Can't resolve '$UPSTREAM_REF'.${c_off}" >&2
+    if ! git remote get-url "$remote" >/dev/null 2>&1; then
+      echo "${c_dim}The '$remote' remote is missing. Add it once:${c_off}" >&2
+      echo "    git remote add $remote $(jq -r '.upstream' "$MANIFEST")" >&2
+      echo "    git fetch $remote" >&2
+    else
+      echo "${c_dim}Fetch the latest first:  git fetch $remote${c_off}" >&2
+    fi
+    exit 1
+  fi
+}
 
 # --- manifest helpers -------------------------------------------------------
 mf()        { jq -r "$1" "$MANIFEST"; }
@@ -59,6 +84,7 @@ cmd_list(){
 }
 
 cmd_status(){
+  needs_upstream
   echo "${c_dim}Comparing against $UPSTREAM_REF (run 'git fetch upstream' first).${c_off}"
   local up_head; up_head="$(git rev-parse --short "$UPSTREAM_REF")"
   echo "${c_dim}$UPSTREAM_REF is at $up_head.${c_off}"
@@ -88,6 +114,7 @@ cmd_status(){
 }
 
 cmd_diff(){
+  needs_upstream
   require_skill "$1"
   local base source; base="$(field "$1" base)"; source="$(field "$1" source)"
   blob_exists "$UPSTREAM_REF" "$source/SKILL.md" || { echo "${c_yel}'$source' no longer exists in $UPSTREAM_REF.${c_off}"; exit 0; }
@@ -95,6 +122,7 @@ cmd_diff(){
 }
 
 cmd_update(){
+  needs_upstream
   require_skill "$1"
   local base source mine mode
   base="$(field "$1" base)"; source="$(field "$1" source)"; mine="$REPO/$(field "$1" mine)"; mode="$(field "$1" mode)"
@@ -159,6 +187,7 @@ cmd_update(){
 }
 
 cmd_add(){
+  needs_upstream
   # add <source-in-matt> [mine] [mode]
   local source="$1"
   local name; name="$(basename "$source")"
@@ -204,6 +233,7 @@ cmd_add(){
 }
 
 cmd_pin(){
+  needs_upstream
   require_skill "$1"
   local newbase; newbase="$(git rev-parse --short "$UPSTREAM_REF")"
   local tmp; tmp="$(mktemp)"
@@ -211,10 +241,109 @@ cmd_pin(){
   echo "${c_grn}'$1' pinned to base $newbase.${c_off}"
 }
 
-usage(){ sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+# Whole-manifest sanity check. Offline checks always run; upstream checks run only
+# when the upstream ref resolves. Exits non-zero if any hard error is found.
+cmd_doctor(){
+  local errors=0 warns=0
+  local ok="  ${c_grn}✓${c_off}" err="  ${c_red}✗${c_off}" warn="  ${c_yel}!${c_off}"
+
+  echo "${c_bld}Manifest${c_off}  ($MANIFEST)"
+  echo "$ok valid JSON"   # we'd have exited already if not
+
+  # --- per-skill offline checks ---
+  echo
+  echo "${c_bld}Tracked skills${c_off}"
+  local seen_mine="" name_clash=""
+  for k in $(skill_keys); do
+    local mine mode dir
+    mine="$(field "$k" mine)"; mode="$(field "$k" mode)"; dir="$REPO/$mine"
+
+    if [[ ! -d "$dir" ]]; then
+      echo "$err $k — 'mine' path missing: $mine"; errors=$((errors+1)); continue
+    fi
+    if [[ ! -f "$dir/SKILL.md" ]]; then
+      echo "$err $k — no SKILL.md in $mine"; errors=$((errors+1)); continue
+    fi
+    if [[ "$mode" != "pure" && "$mode" != "modified" ]]; then
+      echo "$err $k — invalid mode '$mode' (want pure|modified)"; errors=$((errors+1)); continue
+    fi
+    # duplicate 'mine' paths point two manifest entries at one copy
+    if grep -qxF "$mine" <<< "$seen_mine"; then
+      echo "$err $k — duplicate 'mine' path $mine"; errors=$((errors+1)); continue
+    fi
+    seen_mine+="$mine"$'\n'
+    echo "$ok $k ${c_dim}($mode)${c_off}"
+  done
+
+  # --- installer flatten collision: two skill folders sharing a basename ---
+  echo
+  echo "${c_bld}Installer name collisions${c_off} ${c_dim}(install.sh flattens to ~/.claude/skills/<name>)${c_off}"
+  name_clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d \
+                  | sed 's#.*/##' | sort | uniq -d)"
+  if [[ -z "$name_clash" ]]; then
+    echo "$ok every skill folder name is unique"
+  else
+    while IFS= read -r n; do
+      [[ -z "$n" ]] && continue
+      echo "$err name '$n' used by:"
+      find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d -name "$n" \
+        | sed "s#$REPO/#      #"
+      errors=$((errors+1))
+    done <<< "$name_clash"
+  fi
+
+  # --- coverage: skill folders not registered as forks (info only) ---
+  echo
+  echo "${c_bld}Tracking coverage${c_off}"
+  local tracked; tracked="$(for k in $(skill_keys); do field "$k" mine; done)"
+  local untracked=0
+  while IFS= read -r d; do
+    [[ -z "$d" ]] && continue
+    local rel="${d#$REPO/}"
+    if ! grep -qxF "$rel" <<< "$tracked"; then
+      echo "$warn ${rel#skills/} ${c_dim}— not tracked (self-authored, or run 'add' to fork it)${c_off}"
+      untracked=$((untracked+1)); warns=$((warns+1))
+    fi
+  done <<< "$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d | sort)"
+  [[ $untracked -eq 0 ]] && echo "$ok every skill folder is tracked"
+
+  # --- upstream checks (only if we can resolve the ref) ---
+  echo
+  echo "${c_bld}Upstream${c_off} ($UPSTREAM_REF)"
+  if ! git rev-parse --verify --quiet "$UPSTREAM_REF" >/dev/null 2>&1; then
+    echo "$warn can't resolve $UPSTREAM_REF — skipping source/base checks."
+    echo "    ${c_dim}git remote add ${UPSTREAM_REF%%/*} $(jq -r '.upstream' "$MANIFEST") && git fetch ${UPSTREAM_REF%%/*}${c_off}"
+    warns=$((warns+1))
+  else
+    for k in $(skill_keys); do
+      local base source
+      base="$(field "$k" base)"; source="$(field "$k" source)"
+      if ! blob_exists "$UPSTREAM_REF" "$source/SKILL.md"; then
+        echo "$err $k — source gone from upstream: $source ${c_dim}(renamed? repoint or drop it)${c_off}"; errors=$((errors+1))
+      elif ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
+        echo "$warn $k — base '$base' not in history ${c_dim}(run 'git fetch ${UPSTREAM_REF%%/*}')${c_off}"; warns=$((warns+1))
+      else
+        echo "$ok $k"
+      fi
+    done
+  fi
+
+  echo
+  if [[ $errors -gt 0 ]]; then
+    echo "${c_red}$errors error(s), $warns warning(s).${c_off}"
+    exit 1
+  elif [[ $warns -gt 0 ]]; then
+    echo "${c_yel}No errors, $warns warning(s).${c_off}"
+  else
+    echo "${c_grn}All checks passed.${c_off}"
+  fi
+}
+
+usage(){ sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
   status) cmd_status ;;
+  doctor) cmd_doctor ;;
   list)   cmd_list ;;
   diff)   shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream diff <skill>" >&2; exit 1; }; cmd_diff "$1" ;;
   update) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream update <skill>" >&2; exit 1; }; cmd_update "$1" ;;
