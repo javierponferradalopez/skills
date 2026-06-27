@@ -11,11 +11,13 @@
 # Commands:
 #   sync-remotes                         reconcile git remotes from the upstreams catalog (idempotent)
 #   upstream-add <key> <url> [branch]    register an origin in the catalog (adopts nothing)
+#   upstream-remove <key>                drop an origin; offers to keep its forks as self-authored
 #   status [<key>]                       which forks did their upstream touch? (grouped; one origin if <key>)
 #   diff <key>                           show the upstream change (base..ref) for that fork
 #   update <key>                         apply the upstream change to your copy (3-way merge)
 #   pin <key>                            set base = current upstream ref after reviewing/merging
 #   add <key> <source> [mine] [mode]     adopt a skill from an already-registered upstream
+#   detach <upstream>:<name>             stop tracking one fork, keep mine/ (becomes self-authored)
 #   list                                 dump the manifest, forks grouped by upstream
 #   doctor                               sanity-check the manifest, paths, name collisions, upstreams
 #
@@ -419,6 +421,65 @@ cmd_pin(){
   echo "${c_grn}'$1' pinned to base $newbase.${c_off}"
 }
 
+# Stop tracking ONE fork: drop its manifest entry, leave mine/ untouched. The
+# copy survives as a self-authored skill — the safe way to keep a borrowed skill
+# while severing its link to the upstream.
+cmd_detach(){
+  require_skill "$1"
+  local mine; mine="$(field "$1" mine)"
+  local tmp; tmp="$(mktemp)"
+  jq --arg k "$1" 'del(.skills[$k])' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+  echo "${c_grn}Detached '$1'.${c_off} Its copy stays at ${c_dim}$mine${c_off} (now self-authored)."
+}
+
+# Remove an origin from the catalog and drop its git remote. If forks still point
+# at it, list them and ask (stdin) whether to keep them as self-authored: on 'y'
+# detach each (mine/ intact) then remove the origin + remote; on 'n'/empty abort
+# touching nothing, so "no" is always safe.
+cmd_upstream_remove(){
+  local key="${1:-}"
+  [[ -n "$key" ]] || { echo "usage: skills-upstream upstream-remove <key>" >&2; exit 1; }
+  jq -e --arg k "$key" '.upstreams | has($k)' "$MANIFEST" >/dev/null 2>&1 || {
+    echo "${c_red}No such upstream '$key'.${c_off}" >&2; exit 1; }
+
+  local forks; forks="$(jq -r --arg u "$key" \
+    '.skills | to_entries | map(select(.value.upstream==$u)) | .[].key' "$MANIFEST")"
+
+  if [[ -n "$forks" ]]; then
+    echo "${c_yel}'$key' still has fork(s):${c_off}"
+    while IFS= read -r k; do
+      [[ -z "$k" ]] && continue
+      echo "  $k ${c_dim}→ $(field "$k" mine)${c_off}"
+    done <<< "$forks"
+    printf "Detach each (keep mine/ intact, becomes self-authored) and remove '%s'? [y/N]: " "$key" >&2
+    local reply; read -r reply || true
+    if [[ "$reply" != "y" && "$reply" != "Y" ]]; then
+      echo "${c_dim}Aborted — manifest, files and remotes untouched.${c_off}"
+      exit 0
+    fi
+  fi
+
+  # Atomic: drop every fork of this upstream (mine/ left intact) AND the catalog
+  # entry in one rewrite, so an interrupt can't leave a half-removed manifest.
+  local tmp; tmp="$(mktemp)"
+  jq --arg u "$key" \
+     '(.skills |= with_entries(select(.value.upstream != $u))) | del(.upstreams[$u])' \
+     "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
+
+  if [[ -n "$forks" ]]; then
+    while IFS= read -r k; do
+      [[ -z "$k" ]] && continue
+      echo "  ${c_grn}detached $k${c_off} ${c_dim}(copy kept)${c_off}"
+    done <<< "$forks"
+  fi
+
+  local remote; remote="$(up_remote "$key")"
+  if git remote get-url "$remote" >/dev/null 2>&1; then
+    git remote remove "$remote" >/dev/null 2>&1 && echo "  ${c_grn}removed remote $remote${c_off}"
+  fi
+  echo "${c_grn}Removed upstream '$key'.${c_off}"
+}
+
 # Whole-manifest sanity check. Offline checks always run; upstream checks run only
 # when the upstream ref resolves. Exits non-zero if any hard error is found.
 cmd_doctor(){
@@ -569,7 +630,7 @@ cmd_sync_remotes(){
   fi
 }
 
-usage(){ sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage(){ sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
   sync-remotes) cmd_sync_remotes ;;
@@ -580,6 +641,8 @@ case "${1:-}" in
   update) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream update <key>" >&2; exit 1; }; cmd_update "$1" ;;
   pin)    shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream pin <key>" >&2; exit 1; }; cmd_pin "$1" ;;
   upstream-add) shift; cmd_upstream_add "$@" ;;
+  upstream-remove) shift; cmd_upstream_remove "$@" ;;
+  detach) shift; [[ $# -ge 1 ]] || { echo "usage: skills-upstream detach <upstream>:<name>" >&2; exit 1; }; cmd_detach "$1" ;;
   add)    shift; cmd_add "$@" ;;
   ""|-h|--help|help) usage ;;
   *) echo "Unknown command: $1" >&2; usage; exit 1 ;;
