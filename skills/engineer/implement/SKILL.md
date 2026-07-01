@@ -24,7 +24,7 @@ name: implement
 
 Before writing code, read the project's own bar and shape:
 
-- `CONTEXT.md`, `docs/adr/`, `CLAUDE.md` / `AGENTS.md`.
+- `CONTEXT.md`, `docs/`, `CLAUDE.md` / `AGENTS.md`.
 - Explore the repo and fill context with the parts relevant to this issue —
   **especially the test files** that touch the area you'll change.
 
