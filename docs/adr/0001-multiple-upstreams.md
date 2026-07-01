@@ -52,7 +52,7 @@ assumption leaking through the schema and the tool.
   but unambiguous.
 - `status`/`doctor`/`diff`/`update`/`pin` must iterate or resolve per-upstream
   refs instead of a single global ref.
-- The `install.sh` flatten-by-folder-name collision is unchanged and still needs
+- The `bin/dev-link` flatten-by-folder-name collision is unchanged and still needs
   its own check — namespaced manifest keys do not fix folder-name clashes.
 - A residual within-one-upstream basename collision (`matt:eng/tdd` vs
   `matt:prod/tdd`) still requires an explicit suffix at `add` time.

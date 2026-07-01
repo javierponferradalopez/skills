@@ -1,4 +1,5 @@
 ---
+name: implement
 description: Implement a single issue end-to-end and stop with the working tree dirty — no commit, no push, no branch, no issue close. Reads the repo's issue tracker convention to fetch the issue, loads project context, applies the code-standards bar, and embodies red-green-refactor where feasible.
 argument-hint: "#N (passes an issue URL/path)"
 disable-model-invocation: true

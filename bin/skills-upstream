@@ -381,7 +381,7 @@ cmd_add(){
 
   local mine="${mine_arg:-skills/productivity/$name}"
 
-  # 4) the destination folder name must be unique: install.sh flattens every
+  # 4) the destination folder name must be unique: bin/dev-link flattens every
   #    skill to ~/.claude/skills/<folder>, so two folders sharing a basename clash.
   local folder; folder="$(basename "$mine")"
   local clash; clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d -name "$folder" | head -1)"
@@ -516,7 +516,7 @@ cmd_doctor(){
 
   # --- installer flatten collision: two skill folders sharing a basename ---
   echo
-  echo "${c_bld}Installer name collisions${c_off} ${c_dim}(install.sh flattens to ~/.claude/skills/<name>)${c_off}"
+  echo "${c_bld}Installer name collisions${c_off} ${c_dim}(bin/dev-link flattens to ~/.claude/skills/<name>)${c_off}"
   name_clash="$(find "$REPO/skills" -mindepth 2 -maxdepth 2 -type d \
                   | sed 's#.*/##' | sort | uniq -d)"
   if [[ -z "$name_clash" ]]; then
