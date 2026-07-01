@@ -47,32 +47,26 @@ guarding against them at every call site.
 
 ## Comments
 
-Comments earn their place by explaining **why**, not narrating **what**. The default is
-*no comment* — the code itself is the documentation, so make it read clearly instead of
-annotating it.
+**Do not add comments. Code must be self-explanatory.** A comment you're about to
+write is a signal the code isn't clear enough — fix the code, don't annotate it.
 
-Before writing any comment, run this gate: **can a better name or a smaller function
-remove the need?** If yes, do that and write no comment. Only when the reasoning still
-isn't recoverable from the code does a comment belong — and only for one of these:
+When you feel the urge to comment, do one of these instead:
 
-- a non-obvious constraint or invariant,
-- a workaround and the cause that forces it,
-- a deliberate trade-off or a rejected obvious alternative,
-- a link to a spec, issue, or external reference.
+- **Rename** the variable, function, or type so the intent lives in the name.
+- **Extract** the block into a well-named function that says what the comment would have.
+- **Restructure** so the control flow makes the reasoning obvious.
 
-That list is exhaustive. If a comment doesn't fit it, delete it.
+This is absolute for production code. Never emit narration (`// increment counter`),
+change/process markers (`// added`, `// fixed`, `// was: ...`, `// TODO(me)`), section
+banners, restated signatures, or docstrings that paraphrase the code. Delete any comment
+you'd otherwise write, and never carry comments over from examples, scaffolding, or the
+surrounding file into the code you produce.
 
-Never add:
-
-- **Narration** that restates the next line (`// increment counter`, `// loop over users`).
-- **Change/process markers** — `// added`, `// new`, `// fixed`, `// was: ...`,
-  `// TODO(me)` left from your own edit. History lives in git, not the source.
-- **Section banners and decorative dividers** that just label structure the code already shows.
-- **Restated signatures** — docstrings that repeat the parameter list in prose without
-  adding meaning.
-
-Match the file's existing comment density and style. When in doubt, delete the comment and
-let a better name or a smaller function carry the intent instead.
+**Test files are the exception**: comments are fine there as long as they follow the
+project's own testing convention (if one exists) and stay consistent with the existing
+tests. Be continuist — match the style, wording, and density the surrounding tests
+already use, and never introduce a commenting pattern they don't. When the existing
+tests carry no comments, add none.
 
 ## Testing
 
