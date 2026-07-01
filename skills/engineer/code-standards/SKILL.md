@@ -45,6 +45,35 @@ guarding against them at every call site.
 - **Conceptual integrity.** Solve the same kind of problem the same way sibling modules
   do. Coherence across the system beats any single clever feature.
 
+## Comments
+
+Comments earn their place by explaining **why**, not narrating **what**. The default is
+*no comment* — the code itself is the documentation, so make it read clearly instead of
+annotating it.
+
+Before writing any comment, run this gate: **can a better name or a smaller function
+remove the need?** If yes, do that and write no comment. Only when the reasoning still
+isn't recoverable from the code does a comment belong — and only for one of these:
+
+- a non-obvious constraint or invariant,
+- a workaround and the cause that forces it,
+- a deliberate trade-off or a rejected obvious alternative,
+- a link to a spec, issue, or external reference.
+
+That list is exhaustive. If a comment doesn't fit it, delete it.
+
+Never add:
+
+- **Narration** that restates the next line (`// increment counter`, `// loop over users`).
+- **Change/process markers** — `// added`, `// new`, `// fixed`, `// was: ...`,
+  `// TODO(me)` left from your own edit. History lives in git, not the source.
+- **Section banners and decorative dividers** that just label structure the code already shows.
+- **Restated signatures** — docstrings that repeat the parameter list in prose without
+  adding meaning.
+
+Match the file's existing comment density and style. When in doubt, delete the comment and
+let a better name or a smaller function carry the intent instead.
+
 ## Testing
 
 Tests verify **behavior through public interfaces, not implementation details**. Code can
