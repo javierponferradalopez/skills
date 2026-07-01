@@ -1,0 +1,142 @@
+<!--
+  validate-business-idea report template — shadcn/ui aesthetic, self-contained.
+  Fill every {{PLACEHOLDER}}. Render labels/content in the USER'S language.
+  Keep the CSS and the Mermaid wiring. Remove any section you don't use.
+-->
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{IDEA_TITLE}} — market research</title>
+<style>
+  :root {
+    --background: #ffffff; --foreground: #0a0a0a;
+    --card: #ffffff; --border: #e5e5e5; --muted: #f5f5f5;
+    --muted-foreground: #737373; --primary: #171717;
+    --radius: 0.65rem;
+    --green: #16a34a; --amber: #d97706; --red: #dc2626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: #0a0a0a; --foreground: #fafafa;
+      --card: #171717; --border: #262626; --muted: #262626;
+      --muted-foreground: #a3a3a3; --primary: #fafafa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--background); color: var(--foreground);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  header { margin-bottom: 2.5rem; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 .5rem; }
+  .lede { color: var(--muted-foreground); font-size: 1.05rem; margin: 0; }
+  .meta { color: var(--muted-foreground); font-size: .85rem; margin-top: 1rem; }
+  h2 { font-size: 1.25rem; font-weight: 650; letter-spacing: -0.01em; margin: 2.5rem 0 1rem; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1rem 0;
+  }
+  .badge {
+    display: inline-block; padding: .25rem .7rem; border-radius: 9999px;
+    font-size: .8rem; font-weight: 600; border: 1px solid var(--border);
+  }
+  .badge.green { color: var(--green); border-color: var(--green); }
+  .badge.amber { color: var(--amber); border-color: var(--amber); }
+  .badge.red   { color: var(--red);   border-color: var(--red); }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 1rem 0; }
+  th, td { text-align: left; padding: .7rem .75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-weight: 600; color: var(--muted-foreground); font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+  a { color: var(--foreground); text-decoration: underline; text-underline-offset: 2px; }
+  ul { padding-left: 1.2rem; } li { margin: .35rem 0; }
+  .rec { border-left: 3px solid var(--primary); }
+  .mermaid { display: flex; justify-content: center; margin: 1rem 0; }
+  footer { margin-top: 3rem; color: var(--muted-foreground); font-size: .8rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>{{IDEA_TITLE}}</h1>
+    <p class="lede">{{ONE_SENTENCE}}</p>
+    <p class="meta">{{TARGET_CUSTOMER}} · {{MARKET_GEOGRAPHY}} · {{DATE}}</p>
+  </header>
+
+  <!-- Existence verdict. badge class: green=white space, amber=fragmented, red=saturated -->
+  <h2>{{LABEL_VERDICT}}</h2>
+  <div class="card">
+    <span class="badge {{VERDICT_CLASS}}">{{VERDICT_LABEL}}</span>
+    <p>{{VERDICT_EXPLANATION}}</p>
+  </div>
+
+  <!-- Positioning map. Set the two axes to the differentiation dimensions that matter;
+       plot the idea + each competitor. Drop this section if a scatter adds nothing. -->
+  <h2>{{LABEL_POSITIONING}}</h2>
+  <div class="card">
+    <pre class="mermaid">
+quadrantChart
+    title {{QUADRANT_TITLE}}
+    x-axis {{X_LOW}} --> {{X_HIGH}}
+    y-axis {{Y_LOW}} --> {{Y_HIGH}}
+    quadrant-1 {{Q1}}
+    quadrant-2 {{Q2}}
+    quadrant-3 {{Q3}}
+    quadrant-4 {{Q4}}
+    "{{IDEA_TITLE}}": [0.5, 0.6]
+    "{{COMPETITOR_A}}": [0.3, 0.7]
+    "{{COMPETITOR_B}}": [0.7, 0.4]
+    </pre>
+  </div>
+
+  <!-- Competitor table — always included. One row per competitor, each with a link. -->
+  <h2>{{LABEL_COMPETITORS}}</h2>
+  <table>
+    <thead>
+      <tr><th>{{TH_WHO}}</th><th>{{TH_WHAT}}</th><th>{{TH_FOR_WHOM}}</th><th>{{TH_PRICE}}</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="{{COMP_URL}}">{{COMP_NAME}}</a></td>
+        <td>{{COMP_WHAT}}</td>
+        <td>{{COMP_FOR_WHOM}}</td>
+        <td>{{COMP_PRICE}}</td>
+      </tr>
+      <!-- repeat <tr> per competitor -->
+    </tbody>
+  </table>
+
+  <h2>{{LABEL_DIFFERENTIATION}}</h2>
+  <div class="card">
+    <ul>
+      <li><strong>{{AXIS_NAME}}</strong> — {{AXIS_ASSESSMENT}} <!-- defensible or not, vs competitors --></li>
+    </ul>
+  </div>
+
+  <h2>{{LABEL_RISKS}}</h2>
+  <div class="card">
+    <ul>
+      <li>{{RISK}}</li>
+    </ul>
+  </div>
+
+  <h2>{{LABEL_RECOMMENDATION}}</h2>
+  <div class="card rec">
+    <span class="badge {{REC_CLASS}}">{{REC_LABEL}}</span> <!-- pursue/pivot/abandon -->
+    <p>{{REC_EXPLANATION}}</p>
+  </div>
+
+  <footer>{{FOOTER_NOTE}}</footer>
+
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "default" });
+</script>
+</body>
+</html>

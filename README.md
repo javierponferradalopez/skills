@@ -141,7 +141,7 @@ Many skills here are **forked from other creators** — today [Matt Pocock's ski
 
 Each origin is an **upstream** with a short **key** (e.g. `matt`). Every fork records which key it came from and is addressed by a namespaced **manifest key** `<upstream>:<name>` (e.g. `matt:teach`) — so two creators can ship a skill of the same name without colliding. That manifest key is tool-facing only; the name you *invoke* a skill with still comes from its `SKILL.md` frontmatter.
 
-You only need this section if you want to keep your forked skills up to date. Skills you authored yourself (`implement`, `validate`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
+You only need this section if you want to keep your forked skills up to date. Skills you authored yourself (`implement`, `validate`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`, `validate-business-idea`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
 
 ### Quick reference — find your need
 
@@ -331,6 +331,7 @@ Skills fall into two categories: **engineer** — the disciplined inner loop fro
 | [`diagnose`](./skills/productivity/diagnose/SKILL.md)           | Hard bugs, unclear regressions, perf problems: reproduce → minimise → hypothesise → instrument → fix → regression-test.                   |
 | [`improve-codebase-architecture`](./skills/productivity/improve-codebase-architecture/SKILL.md) | Finding deepening opportunities in a codebase — turning shallow modules into deep ones for testability and AI-navigability, presented as a visual before/after HTML report informed by `CONTEXT.md` and ADRs. |
 | [`zoom-out`](./skills/productivity/zoom-out/SKILL.md)           | Stepping back for broader context or a higher-level perspective on an unfamiliar section of code.                                         |
+| [`validate-business-idea`](./skills/productivity/validate-business-idea/SKILL.md) | Validating a business idea before building — a bounded grill extracts the idea, mandatory multi-angle web research checks whether it already exists and who the competitors are, and it ships a shadcn/ui HTML report with an existence verdict, differentiation axes, and a pursue/pivot/abandon call. |
 | [`github-pr`](./skills/productivity/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
 | [`suggest-reviewers`](./skills/productivity/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
 | [`setup-skills`](./skills/productivity/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md` plus `docs/agents/` so the engineering skills know its issue tracker and domain-doc layout. |
