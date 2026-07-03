@@ -154,14 +154,14 @@ Start here. Match what you want to do, run the command, and follow the deep-dive
 | **Focus on one creator**                                    | `bin/skills-upstream status <key>`                            | `bin/skills-upstream status matt`                               |
 | **Review what changed in one fork** before pulling         | `bin/skills-upstream diff <upstream>:<name>`                  | `bin/skills-upstream diff matt:teach`                           |
 | **Pull an upstream's changes into one fork**                | `update <upstream>:<name>` → resolve → `pin <upstream>:<name>`| `bin/skills-upstream update matt:teach` → resolve → `pin matt:teach` |
-| **Register a new creator's repo**                           | `bin/skills-upstream upstream-add <key> <url> [branch]`       | `bin/skills-upstream upstream-add alice https://github.com/alice/skills.git` |
-| **Adopt a skill from a registered upstream**                | `bin/skills-upstream add <key> <source> [mine]`               | `bin/skills-upstream add alice skills/agents/prototype skills/utils/prototype` |
+| **Register a new creator's repo**                           | `bin/skills-upstream upstream-add <key> <url> [<branch>]`     | `bin/skills-upstream upstream-add alice https://github.com/alice/skills.git` |
+| **Adopt a skill from a registered upstream**                | `bin/skills-upstream add <key> <source> [<mine>]`             | `bin/skills-upstream add alice skills/agents/prototype skills/engineer/prototype` |
 | **Stop tracking one fork** (keep your copy as your own)     | `bin/skills-upstream detach <upstream>:<name>`                | `bin/skills-upstream detach matt:teach`                         |
 | **Drop a whole upstream** (keep its forks as self-authored) | `bin/skills-upstream upstream-remove <key>`                   | `bin/skills-upstream upstream-remove alice`                     |
 | **List all forks grouped by origin** (source, base, mode)   | `bin/skills-upstream list`                                    | `bin/skills-upstream list`                                      |
 | **Something looks broken / cryptic error**                  | `bin/skills-upstream doctor`                                  | `bin/skills-upstream doctor`                                    |
 
-> `<key>` is an upstream's short name (e.g. `matt`). `<upstream>:<name>` is a fork's manifest key from the left column of `list` (e.g. `matt:teach`). `<source>` is a path inside that upstream's repo (e.g. `skills/engineering/prototype`). `[mine]` is where it lands in *your* tree — pick any category, independent of the author's path; omit it and it defaults to `skills/productivity/<name>`.
+> `<key>` is an upstream's short name (e.g. `matt`). `<upstream>:<name>` is a fork's manifest key from the left column of `list` (e.g. `matt:teach`). `<source>` is a path inside that upstream's repo (e.g. `skills/engineering/prototype`). `[<mine>]` is where it lands in *your* tree — pick any category, independent of the author's path; omit it and it defaults to `skills/productivity/<name>`.
 
 ### How provenance is recorded
 
@@ -208,13 +208,13 @@ It runs only in this authoring repo (it needs `jq` and the git history); it neve
 | Command                                            | What it does                                                                 |
 | -------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `bin/skills-upstream sync-remotes`                 | Reconciles git remotes from the catalog: adds missing `upstream-<key>` remotes, fixes changed URLs, fetches all, records each default HEAD. Idempotent. |
-| `bin/skills-upstream upstream-add <key> <url> [branch]` | Registers an origin in the catalog. Adopts nothing — run `sync-remotes` next, then `add`. |
+| `bin/skills-upstream upstream-add <key> <url> [<branch>]` | Registers an origin in the catalog. Adopts nothing — run `sync-remotes` next, then `add`. |
 | `bin/skills-upstream upstream-remove <key>`        | Drops an origin and its remote. If forks still reference it, lists them and asks whether to keep them as self-authored. |
 | `bin/skills-upstream status [<key>]`               | Walks every upstream (or just `<key>`), grouped by origin: which forks the upstream touched since each `base`. Degrades gracefully on a missing remote. |
 | `bin/skills-upstream diff <upstream>:<name>`       | Shows that fork's upstream changes (`base..upstream-<key>/<branch>`).        |
 | `bin/skills-upstream update <upstream>:<name>`     | Applies the upstream's changes to your copy (3-way merge, or overwrite if `pure`). |
 | `bin/skills-upstream pin <upstream>:<name>`        | Records that fork's current upstream ref as the new `base`, once you're happy. |
-| `bin/skills-upstream add <key> <source> [mine] [mode]` | Adopts a skill from an **already-registered** upstream and registers the fork. |
+| `bin/skills-upstream add <key> <source> [<mine>] [<mode>]` | Adopts a skill from an **already-registered** upstream and registers the fork. |
 | `bin/skills-upstream detach <upstream>:<name>`     | Stops tracking one fork — drops its manifest entry, leaves `mine/` intact (becomes self-authored). |
 | `bin/skills-upstream list`                         | Dumps the manifest, forks grouped under their origin (source, base, mode).   |
 | `bin/skills-upstream doctor`                       | Sanity-checks everything: valid JSON, every `mine` path exists, no installer name collisions, untracked folders, and per-upstream that the remote/ref resolves and every `source`/`base` is still alive. |
@@ -235,8 +235,8 @@ bin/skills-upstream add alice skills/agents/prototype skills/engineer/prototype 
 
 - `<key>` is the upstream's catalog key. `add` fails clearly if it isn't registered yet, pointing you to `upstream-add`.
 - `<source>` is the path **in that upstream's repo** (find it with `git ls-tree -r --name-only upstream-<key>/HEAD | grep <name>`).
-- `[mine]` is where it lands in *your* tree (default `skills/productivity/<name>`). Pick any category folder — the layout is flattened to `~/.claude/skills/<name>/` anyway.
-- `[mode]` defaults to `pure` (track the upstream verbatim). If you plan to customize it, pass `modified`, or flip its `mode` in the manifest once you start editing — otherwise the next `update` will overwrite your changes.
+- `[<mine>]` is where it lands in *your* tree (default `skills/productivity/<name>`). Pick any category folder — the layout is flattened to `~/.claude/skills/<name>/` anyway.
+- `[<mode>]` defaults to `pure` (track the upstream verbatim). If you plan to customize it, pass `modified`, or flip its `mode` in the manifest once you start editing — otherwise the next `update` will overwrite your changes.
 
 `add` copies **all** of the skill's files (e.g. `SKILL.md` plus any `UI.md`, `GLOSSARY.md`, `scripts/`), registers it as `<key>:<name>`, pins `base` to the current upstream ref, and refuses to clobber an existing skill or folder-name collision. In the rare case where one upstream has two sources sharing a basename, `add` asks for an explicit suffix to disambiguate the key. The new skill's invocation name comes from its `SKILL.md` frontmatter `name:`, exactly as the author wrote it.
 
