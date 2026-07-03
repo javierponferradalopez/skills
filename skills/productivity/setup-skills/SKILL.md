@@ -10,6 +10,7 @@ Scaffold the per-repo configuration that the engineering skills assume:
 
 - **Issue tracker** — where issues live (GitHub by default; GitLab, ClickUp, and local markdown are also supported out of the box)
 - **Domain docs** — where `CONTEXT.md` and ADRs live, and the consumer rules for reading them
+- **Code standards** — a fixed rule telling agents to load the `code-standards` skill so all generated code meets the project's quality bar
 
 This is a prompt-driven skill, not a deterministic script. Explore, present what you found, confirm with the user, then write.
 
@@ -86,6 +87,10 @@ The block:
 ### Domain docs
 
 [one-line summary of layout — "single-context" or "multi-context"]. See `docs/agents/domain.md`.
+
+### Code standards
+
+Before writing or modifying code, load the `code-standards` skill and hold all generated code to it.
 ```
 
 Then write the docs files using the seed templates in this skill folder as a starting point:
