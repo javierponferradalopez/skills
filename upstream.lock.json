@@ -89,6 +89,13 @@
       "source": "skills/engineering/diagnosing-bugs",
       "base": "5d78bd0",
       "mode": "modified"
+    },
+    "matt:wayfinder": {
+      "upstream": "matt",
+      "mine": "skills/engineer/wayfinder",
+      "source": "skills/in-progress/wayfinder",
+      "base": "1445797",
+      "mode": "pure"
     }
   }
 }
