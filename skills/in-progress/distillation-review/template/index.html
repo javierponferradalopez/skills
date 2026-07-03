@@ -5,80 +5,172 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Distillation Review</title>
 
-<!-- Layout & diff colors are OWN CSS: the review stays legible with zero network. -->
+<!-- shadcn/ui design system (base: zinc, dark) replicated as plain CSS — the page
+     is self-contained (no Tailwind, no build, works under file://). Tokens are the
+     canonical shadcn HSL triplets; diff/impact colors are domain-semantic tokens
+     layered on top so the review stays legible. -->
 <style>
   :root {
-    --bg: #0d1117; --panel: #161b22; --panel-2: #1c2330; --border: #30363d;
-    --fg: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
-    --add-bg: #12261e; --add-fg: #3fb950; --add-gutter: #1b4721;
-    --del-bg: #2d1214; --del-fg: #f85149; --del-gutter: #5c1a1e;
-    --tag-dm: #a371f7; --tag-api: #58a6ff; --tag-wf: #db61a2; --tag-diff: #8b949e;
+    /* shadcn/ui — zinc, dark. Canonical HSL triplets. */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 5.5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --radius: 0.5rem;
+
+    /* radius scale (shadcn: lg / md / sm) */
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    /* domain-semantic colors NOT in shadcn's neutral palette — kept so diffs and
+       risk levels stay legible. Layered on top of the token system. */
+    --add-bg: 142 40% 11%; --add-fg: 142 69% 48%; --add-gutter: 142 42% 17%;
+    --del-bg: 0 38% 14%;   --del-fg: 0 72% 60%;   --del-gutter: 0 42% 22%;
+    --warn-fg: 38 92% 52%;
+
+    /* app-facing aliases (avoid colliding with shadcn triplet names) */
+    --bg: hsl(var(--background));
+    --fg: hsl(var(--foreground));
+    --mut: hsl(var(--muted-foreground));
+    --panel: hsl(var(--card));
+    --panel-2: hsl(var(--secondary));
+    --line: hsl(var(--border));
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--fg);
-    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
   code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px 96px; }
-
-  header.hd { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 28px; }
-  header.hd h1 { margin: 0 0 8px; font-size: 22px; }
-  .meta { color: var(--muted); font-size: 13px; }
-  .meta .ref { color: var(--fg); }
-  .counts { margin-top: 10px; display: flex; gap: 16px; font-size: 13px; }
-  .counts .add { color: var(--add-fg); } .counts .del { color: var(--del-fg); }
-
-  section { margin: 32px 0; }
-  h2.sec { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 14px; }
-  .placeholder { color: var(--muted); font-style: italic; }
-
-  .narrative p { margin: 0 0 12px; max-width: 74ch; }
-
-  .diagram { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; overflow: auto; }
-  .diagram .dtitle { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
-
-  /* File tree */
-  .tree { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .tree .row { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-top: 1px solid var(--border); }
-  .tree .row:first-child { border-top: 0; }
-  .tree .st { width: 18px; text-align: center; font-weight: 700; font-size: 12px; }
-  .st.A { color: var(--add-fg); } .st.M { color: var(--accent); } .st.D { color: var(--del-fg); } .st.R { color: var(--tag-dm); }
-  .tree .path { flex: 1; word-break: break-all; }
-  .tree .nums { color: var(--muted); font-size: 12px; }
-  .tree .nums .p { color: var(--add-fg); } .tree .nums .m { color: var(--del-fg); }
-
-  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
-  .tag.data-model { color: var(--tag-dm); border-color: var(--tag-dm); }
-  .tag.api-endpoint { color: var(--tag-api); border-color: var(--tag-api); }
-  .tag.wireframe { color: var(--tag-wf); border-color: var(--tag-wf); }
-  .tag.diff { color: var(--tag-diff); border-color: var(--tag-diff); }
-
-  /* Tabs */
-  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0; }
-  .tabs button {
-    background: var(--panel); color: var(--muted); border: 1px solid var(--border);
-    border-bottom: none; border-radius: 8px 8px 0 0; padding: 8px 14px; cursor: pointer; font-size: 13px;
+  a { color: var(--fg); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible, .flink:focus-visible {
+    outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: var(--radius-sm);
   }
-  .tabs button.active { background: var(--panel-2); color: var(--fg); }
-  .panel { background: var(--panel-2); border: 1px solid var(--border); border-radius: 0 8px 8px 8px; padding: 20px; }
-  .panel .ptitle { font-size: 16px; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
-  .panel .psummary { color: var(--muted); margin: 0 0 16px; max-width: 74ch; }
-  .panel .ppath { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 96px; }
+
+  header.hd { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 30px; }
+  header.hd .titlerow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header.hd h1 { margin: 0 0 8px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+  .srcbadge { font-size: 12px; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--line);
+    color: var(--fg); background: hsl(var(--secondary)); font-weight: 500; }
+  a.srcbadge:hover { background: hsl(var(--accent)); text-decoration: none; }
+  .meta { color: var(--mut); font-size: 13px; }
+  .meta .ref { color: var(--fg); font-weight: 500; }
+  .counts { margin-top: 12px; display: flex; gap: 16px; font-size: 13px; }
+  .counts .add { color: hsl(var(--add-fg)); } .counts .del { color: hsl(var(--del-fg)); }
+
+  section { margin: 34px 0; }
+  h2.sec { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--mut); margin: 0 0 14px; font-weight: 600; }
+  .placeholder { color: var(--mut); font-style: italic; }
+
+  /* Card primitive (shadcn: rounded-lg border bg-card shadow-sm) */
+  .card, .diagram, .tree, .mmap .card, .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Project chips (shadcn Badge, secondary) */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 8px; background: hsl(var(--secondary));
+    border-radius: 9999px; padding: 5px 13px; font-size: 13px; }
+  .chip .cname { color: hsl(var(--secondary-foreground)); font-weight: 600; }
+  .chip .cnums { color: var(--mut); font-size: 12px; }
+  .chip .cnums .p { color: hsl(var(--add-fg)); } .chip .cnums .m { color: hsl(var(--del-fg)); }
+
+  /* Mental map (uniform shadcn cards; the label carries the meaning) */
+  .mmap { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .mmap .card { padding: 18px 20px; }
+  .mmap .card .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--mut); margin-bottom: 7px; font-weight: 600; }
+  .mmap .card .body { max-width: 78ch; }
+
+  .diagram { padding: 20px; overflow: auto; margin-bottom: 16px; }
+  .diagram .dtitle { color: var(--fg); font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; font-weight: 500; }
+
+  /* File tree, grouped by project */
+  .pgroup { margin-bottom: 20px; }
+  .pgroup .phead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .pgroup .phead .pname { font-weight: 600; }
+  .pgroup .phead .pnums { color: var(--mut); font-size: 12px; }
+  .pgroup .phead .pnums .p { color: hsl(var(--add-fg)); } .pgroup .phead .pnums .m { color: hsl(var(--del-fg)); }
+  .pgroup .phead .prole { color: var(--mut); font-size: 13px; font-style: italic; }
+  .tree { overflow: hidden; }
+  .tree .row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--line); }
+  .tree .row:first-child { border-top: 0; }
+  .tree .row:hover { background: hsl(var(--accent) / 0.4); }
+  .tree .st { width: 18px; text-align: center; font-weight: 700; font-size: 12px; }
+  .st.A { color: hsl(var(--add-fg)); } .st.M { color: var(--fg); } .st.D { color: hsl(var(--del-fg)); } .st.R { color: var(--mut); }
+  .tree .path { flex: 1; word-break: break-all; }
+  .tree .nums { color: var(--mut); font-size: 12px; }
+  .tree .nums .p { color: hsl(var(--add-fg)); } .tree .nums .m { color: hsl(var(--del-fg)); }
+
+  /* Per-file link / copy affordance (shadcn Button, outline) */
+  .flink { font-size: 12px; padding: 3px 10px; border-radius: var(--radius-md); border: 1px solid hsl(var(--input));
+    background: var(--bg); color: var(--fg); cursor: pointer; white-space: nowrap; font-weight: 500; transition: background .12s; }
+  .flink:hover { background: hsl(var(--accent)); text-decoration: none; }
+  .flink.copied { color: hsl(var(--add-fg)); border-color: hsl(var(--add-fg)); }
+
+  /* Categorical tags → neutral outline badges (shadcn Badge, outline) */
+  .tag { font-size: 11px; padding: 1px 9px; border-radius: 9999px; border: 1px solid var(--line);
+    color: var(--mut); white-space: nowrap; font-weight: 500; }
+  .dkind { font-size: 11px; padding: 1px 9px; border-radius: 9999px; border: 1px solid var(--line); color: var(--mut); text-transform: lowercase; }
+
+  /* Impact badges → semantic (kept colored; the reviewer scans by these) */
+  .imp { font-size: 11px; padding: 1px 9px; border-radius: 9999px; border: 1px solid; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .imp.breaking { color: hsl(var(--del-fg)); border-color: hsl(var(--del-fg)); }
+  .imp.risky { color: hsl(var(--warn-fg)); border-color: hsl(var(--warn-fg)); }
+  .imp.safe { color: hsl(var(--add-fg)); border-color: hsl(var(--add-fg)); }
+
+  /* Tabs (shadcn Tabs: muted list bar + elevated active trigger) */
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; background: hsl(var(--muted)); padding: 4px;
+    border-radius: var(--radius-md); margin-bottom: 12px; }
+  .tabs button {
+    background: transparent; color: var(--mut); border: none; border-radius: var(--radius-sm);
+    padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px; transition: color .12s;
+  }
+  .tabs button:hover { color: var(--fg); }
+  .tabs button.active { background: var(--bg); color: var(--fg); box-shadow: var(--shadow-sm); }
+  .tabs button .dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; }
+  .dot.breaking { background: hsl(var(--del-fg)); } .dot.risky { background: hsl(var(--warn-fg)); } .dot.safe { background: hsl(var(--add-fg)); }
+  .panel { padding: 22px; }
+  .panel .ptitle { font-size: 16px; margin: 0 0 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 600; }
+  .panel .psummary { color: var(--mut); margin: 0 0 8px; max-width: 74ch; }
+  .panel .impwhy { color: var(--fg); margin: 0 0 12px; max-width: 74ch; font-size: 13px; }
+  .panel .ppath { color: var(--mut); font-size: 12px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
 
   /* Diff */
-  .hunk { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 12px 0; }
-  .hunk .hh { background: #0b1a2b; color: var(--accent); padding: 4px 12px; font-size: 12px; }
+  .hunk { border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; margin: 12px 0; }
+  .hunk .hh { background: hsl(var(--secondary)); color: var(--mut); padding: 5px 12px; font-size: 12px; }
   .dline { display: flex; white-space: pre; font-size: 12.5px; }
   .dline .sign { width: 22px; text-align: center; user-select: none; flex: none; }
   .dline .txt { flex: 1; padding-right: 12px; }
-  .dline.add { background: var(--add-bg); } .dline.add .sign { color: var(--add-fg); background: var(--add-gutter); }
-  .dline.del { background: var(--del-bg); } .dline.del .sign { color: var(--del-fg); background: var(--del-gutter); }
-  .dline.ctx .sign { color: var(--muted); }
-  .binary { color: var(--muted); font-style: italic; padding: 10px 12px; }
+  .dline.add { background: hsl(var(--add-bg)); } .dline.add .sign { color: hsl(var(--add-fg)); background: hsl(var(--add-gutter)); }
+  .dline.del { background: hsl(var(--del-bg)); } .dline.del .sign { color: hsl(var(--del-fg)); background: hsl(var(--del-gutter)); }
+  .dline.ctx .sign { color: var(--mut); }
+  .binary { color: var(--mut); font-style: italic; padding: 10px 12px; }
 
-  .wireframe-box { border: 1px dashed var(--tag-wf); border-radius: 8px; padding: 16px; margin: 12px 0; background: #0f0b12; }
-  .offnote { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .wireframe-box { border: 1px dashed var(--line); border-radius: var(--radius-md); padding: 16px; margin: 12px 0; background: hsl(var(--secondary) / 0.4); }
+  .offnote { color: var(--mut); font-size: 12px; margin-top: 8px; }
 
   /* highlight.js token colors — OWN CSS (no CDN theme). hljs (from CDN) only adds
      the class names; these rules color them, so no extra network dependency. */
@@ -136,13 +228,52 @@ window.addEventListener("load", function () {
     if (HAS_HLJS && lang) { try { return window.hljs.highlight(code, { language: lang }).value; } catch (e) {} }
     return esc(code);
   }
+  // clipboard that also works under file:// (navigator.clipboard may be blocked)
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function () { return fallbackCopy(text); });
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+  function fallbackCopy(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+    } catch (e) {}
+  }
+  // per-file link / copy affordance from f.link (true by construction)
+  function linkEl(link) {
+    if (!link) return null;
+    if (link.mode === "href" && link.href) {
+      return el("<a class='flink' href='" + esc(link.href) + "' target='_blank' rel='noopener' title='Open on GitHub'>open ↗</a>");
+    }
+    if (link.mode === "copy" && link.path) {
+      var b = el("<button class='flink' title='" + esc(link.path) + "'>copy path</button>");
+      b.addEventListener("click", function () {
+        copyText(link.path).then(function () {
+          b.textContent = "copied!"; b.classList.add("copied");
+          setTimeout(function () { b.textContent = "copy path"; b.classList.remove("copied"); }, 1200);
+        });
+      });
+      return b;
+    }
+    return null;
+  }
+
   var fileByPath = {}; (D.files || []).forEach(function (f) { fileByPath[f.path] = f; });
+  var mermaidHosts = [];
 
   // ---- header ----
   var m = D.meta || {};
+  var srcLabel = m.source === "pr" ? "PR #" + (m.prNumber != null ? m.prNumber : "") :
+                 m.source === "branch" ? "remote branch" : "local changes";
+  var srcBadge = (m.source === "pr" && m.prUrl)
+    ? "<a class='srcbadge' href='" + esc(m.prUrl) + "' target='_blank' rel='noopener'>" + esc(srcLabel) + " ↗</a>"
+    : "<span class='srcbadge'>" + esc(srcLabel) + "</span>";
   app.appendChild(el(
     "<header class='hd'>" +
-    "<h1>Distillation Review</h1>" +
+    "<div class='titlerow'><h1>Distillation Review</h1>" + srcBadge + "</div>" +
     "<div class='meta'><span class='ref'>" + esc(m.branch) + "</span> vs <span class='ref'>" + esc(m.base) + "</span>" +
     " · merge-base <span class='mono'>" + esc(m.mergeBase) + "</span> · HEAD <span class='mono'>" + esc(m.headSha) + "</span></div>" +
     "<div class='counts'><span>" + (m.fileCount || 0) + " files</span>" +
@@ -150,52 +281,97 @@ window.addEventListener("load", function () {
     "</header>"
   ));
 
-  // ---- narrative ----
-  var narr = document.createElement("section");
-  narr.innerHTML = "<h2 class='sec'>Overview</h2>";
-  if (D.narrative) {
-    var paras = Array.isArray(D.narrative) ? D.narrative : String(D.narrative).split(/\n\n+/);
-    var box = el("<div class='narrative'></div>");
-    paras.forEach(function (p) { box.appendChild(el("<p>" + esc(p) + "</p>")); });
-    narr.appendChild(box);
-  } else { narr.appendChild(el("<p class='placeholder'>No narrative yet.</p>")); }
-  app.appendChild(narr);
+  // ---- projects touched (chips) ----
+  var projects = D.projects || [];
+  if (projects.length) {
+    var psec = document.createElement("section");
+    psec.innerHTML = "<h2 class='sec'>Projects touched</h2>";
+    var chips = el("<div class='chips'></div>");
+    projects.forEach(function (p) {
+      chips.appendChild(el(
+        "<div class='chip'><span class='cname'>" + esc(p.name) + "</span>" +
+        "<span class='cnums'><span class='p'>+" + (p.added || 0) + "</span> <span class='m'>−" + (p.removed || 0) + "</span> · " +
+        (p.fileCount || 0) + " files</span></div>"
+      ));
+    });
+    psec.appendChild(chips); app.appendChild(psec);
+  }
 
-  // ---- diagram ----
-  if (D.diagram && D.diagram.mermaid) {
+  // ---- mental map (problem / approach / impact) ----
+  var mmsec = document.createElement("section");
+  mmsec.innerHTML = "<h2 class='sec'>What this solves</h2>";
+  var mm = D.mentalMap;
+  if (mm && (mm.problem || mm.approach || mm.impact)) {
+    var grid = el("<div class='mmap'></div>");
+    [["problem", "Problem"], ["approach", "Approach"], ["impact", "Impact"]].forEach(function (pair) {
+      if (!mm[pair[0]]) return;
+      grid.appendChild(el(
+        "<div class='card " + pair[0] + "'><div class='lbl'>" + pair[1] + "</div>" +
+        "<div class='body'>" + esc(mm[pair[0]]) + "</div></div>"
+      ));
+    });
+    mmsec.appendChild(grid);
+  } else { mmsec.appendChild(el("<p class='placeholder'>No mental map yet.</p>")); }
+  app.appendChild(mmsec);
+
+  // ---- diagrams (1..n typed) ----
+  var diagrams = Array.isArray(D.diagrams) ? D.diagrams : (D.diagrams ? [D.diagrams] : []);
+  diagrams = diagrams.filter(function (d) { return d && d.mermaid; });
+  if (diagrams.length) {
     var dsec = document.createElement("section");
-    dsec.innerHTML = "<h2 class='sec'>Diagram</h2>";
-    var wrap = el("<div class='diagram'></div>");
-    if (D.diagram.title) wrap.appendChild(el("<div class='dtitle'>" + esc(D.diagram.title) + "</div>"));
-    if (HAS_MERMAID) {
-      var host = el("<div class='mermaid'>" + esc(D.diagram.mermaid) + "</div>");
-      wrap.appendChild(host);
-      dsec.appendChild(wrap); app.appendChild(dsec);
-      try {
-        window.mermaid.initialize({ startOnLoad: false, theme: "dark" });
-        window.mermaid.run({ nodes: [host] });
-      } catch (e) { wrap.appendChild(el("<div class='offnote'>Diagram failed to render.</div>")); }
-    } else {
-      wrap.appendChild(el("<pre class='mono'>" + esc(D.diagram.mermaid) + "</pre>"));
-      wrap.appendChild(el("<div class='offnote'>Mermaid unavailable (offline) — showing source.</div>"));
-      dsec.appendChild(wrap); app.appendChild(dsec);
+    dsec.innerHTML = "<h2 class='sec'>Diagrams</h2>";
+    diagrams.forEach(function (d) {
+      var wrap = el("<div class='diagram'></div>");
+      var head = "<div class='dtitle'>" + (d.kind ? "<span class='dkind'>" + esc(d.kind) + "</span>" : "") +
+                 "<span>" + esc(d.title || "") + "</span></div>";
+      wrap.appendChild(el(head));
+      if (HAS_MERMAID) {
+        var host = el("<div class='mermaid'>" + esc(d.mermaid) + "</div>");
+        wrap.appendChild(host); mermaidHosts.push(host);
+      } else {
+        wrap.appendChild(el("<pre class='mono'>" + esc(d.mermaid) + "</pre>"));
+        wrap.appendChild(el("<div class='offnote'>Mermaid unavailable (offline) — showing source.</div>"));
+      }
+      dsec.appendChild(wrap);
+    });
+    app.appendChild(dsec);
+    if (HAS_MERMAID && mermaidHosts.length) {
+      try { window.mermaid.initialize({ startOnLoad: false, theme: "dark" }); window.mermaid.run({ nodes: mermaidHosts }); }
+      catch (e) { /* leave source visible */ }
     }
   }
 
-  // ---- file tree ----
+  // ---- file tree, grouped by project ----
   var tsec = document.createElement("section");
   tsec.innerHTML = "<h2 class='sec'>Files changed</h2>";
-  var tree = el("<div class='tree'></div>");
-  (D.files || []).forEach(function (f) {
+  function renderRow(f) {
     var st = (f.status || "M").charAt(0);
     var tag = f.hint ? "<span class='tag " + f.hint + "'>" + f.hint + "</span>" : "";
-    tree.appendChild(el(
+    var row = el(
       "<div class='row'><span class='st " + st + "'>" + st + "</span>" +
       "<span class='path mono'>" + esc(f.path) + "</span>" + tag +
       "<span class='nums'><span class='p'>+" + f.added + "</span> <span class='m'>−" + f.removed + "</span></span></div>"
-    ));
-  });
-  tsec.appendChild(tree); app.appendChild(tsec);
+    );
+    var lk = linkEl(f.link); if (lk) row.appendChild(lk);
+    return row;
+  }
+  if (projects.length) {
+    projects.forEach(function (p) {
+      var group = el("<div class='pgroup'></div>");
+      var head = "<div class='phead'><span class='pname mono'>" + esc(p.name) + "</span>" +
+        "<span class='pnums'><span class='p'>+" + (p.added || 0) + "</span> <span class='m'>−" + (p.removed || 0) + "</span></span>" +
+        (p.role ? "<span class='prole'>" + esc(p.role) + "</span>" : "") + "</div>";
+      group.appendChild(el(head));
+      var tree = el("<div class='tree'></div>");
+      (D.files || []).filter(function (f) { return f.project === p.path; }).forEach(function (f) { tree.appendChild(renderRow(f)); });
+      group.appendChild(tree); tsec.appendChild(group);
+    });
+  } else {
+    var tree = el("<div class='tree'></div>");
+    (D.files || []).forEach(function (f) { tree.appendChild(renderRow(f)); });
+    tsec.appendChild(tree);
+  }
+  app.appendChild(tsec);
 
   // ---- key changes (tabs) ----
   var ksec = document.createElement("section");
@@ -231,11 +407,26 @@ window.addEventListener("load", function () {
 
   kc.forEach(function (change, i) {
     var bt = change.blockType || "diff";
-    var btn = el("<button" + (i === 0 ? " class='active'" : "") + ">" + esc(change.title || change.path || ("Change " + (i + 1))) + "</button>");
+    var imp = change.impact;
+    var dot = imp ? "<span class='dot " + imp + "'></span>" : "";
+    var btn = el("<button" + (i === 0 ? " class='active'" : "") + ">" + dot +
+      "<span>" + esc(change.title || change.path || ("Change " + (i + 1))) + "</span></button>");
     var panel = el("<div class='panel'" + (i === 0 ? "" : " style='display:none'") + "></div>");
-    panel.appendChild(el("<h3 class='ptitle'>" + esc(change.title || change.path) + " <span class='tag " + bt + "'>" + bt + "</span></h3>"));
-    if (change.path) panel.appendChild(el("<div class='ppath mono'>" + esc(change.path) + "</div>"));
+
+    var ptitle = "<h3 class='ptitle'>" + esc(change.title || change.path) +
+      " <span class='tag " + bt + "'>" + bt + "</span>" +
+      (imp ? " <span class='imp " + imp + "'>" + imp + "</span>" : "") +
+      (change.project ? " <span class='tag proj'>" + esc(change.project) + "</span>" : "") + "</h3>";
+    panel.appendChild(el(ptitle));
+
+    if (change.path) {
+      var pathrow = el("<div class='ppath mono'>" + esc(change.path) + "</div>");
+      var f = fileByPath[change.path];
+      var lk = f ? linkEl(f.link) : null; if (lk) pathrow.appendChild(lk);
+      panel.appendChild(pathrow);
+    }
     if (change.summary) panel.appendChild(el("<p class='psummary'>" + esc(change.summary) + "</p>"));
+    if (change.impactWhy) panel.appendChild(el("<p class='impwhy'>⚠ " + esc(change.impactWhy) + "</p>"));
     if (bt === "wireframe" && change.wireframeHtml) {
       var wf = el("<div class='wireframe-box'></div>"); wf.innerHTML = change.wireframeHtml; panel.appendChild(wf);
     }
