@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Distillation Review</title>
+
+<!-- Layout & diff colors are OWN CSS: the review stays legible with zero network. -->
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --panel-2: #1c2330; --border: #30363d;
+    --fg: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+    --add-bg: #12261e; --add-fg: #3fb950; --add-gutter: #1b4721;
+    --del-bg: #2d1214; --del-fg: #f85149; --del-gutter: #5c1a1e;
+    --tag-dm: #a371f7; --tag-api: #58a6ff; --tag-wf: #db61a2; --tag-diff: #8b949e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px 96px; }
+
+  header.hd { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 28px; }
+  header.hd h1 { margin: 0 0 8px; font-size: 22px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .meta .ref { color: var(--fg); }
+  .counts { margin-top: 10px; display: flex; gap: 16px; font-size: 13px; }
+  .counts .add { color: var(--add-fg); } .counts .del { color: var(--del-fg); }
+
+  section { margin: 32px 0; }
+  h2.sec { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 14px; }
+  .placeholder { color: var(--muted); font-style: italic; }
+
+  .narrative p { margin: 0 0 12px; max-width: 74ch; }
+
+  .diagram { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; overflow: auto; }
+  .diagram .dtitle { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+
+  /* File tree */
+  .tree { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .tree .row { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-top: 1px solid var(--border); }
+  .tree .row:first-child { border-top: 0; }
+  .tree .st { width: 18px; text-align: center; font-weight: 700; font-size: 12px; }
+  .st.A { color: var(--add-fg); } .st.M { color: var(--accent); } .st.D { color: var(--del-fg); } .st.R { color: var(--tag-dm); }
+  .tree .path { flex: 1; word-break: break-all; }
+  .tree .nums { color: var(--muted); font-size: 12px; }
+  .tree .nums .p { color: var(--add-fg); } .tree .nums .m { color: var(--del-fg); }
+
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .tag.data-model { color: var(--tag-dm); border-color: var(--tag-dm); }
+  .tag.api-endpoint { color: var(--tag-api); border-color: var(--tag-api); }
+  .tag.wireframe { color: var(--tag-wf); border-color: var(--tag-wf); }
+  .tag.diff { color: var(--tag-diff); border-color: var(--tag-diff); }
+
+  /* Tabs */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0; }
+  .tabs button {
+    background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+    border-bottom: none; border-radius: 8px 8px 0 0; padding: 8px 14px; cursor: pointer; font-size: 13px;
+  }
+  .tabs button.active { background: var(--panel-2); color: var(--fg); }
+  .panel { background: var(--panel-2); border: 1px solid var(--border); border-radius: 0 8px 8px 8px; padding: 20px; }
+  .panel .ptitle { font-size: 16px; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
+  .panel .psummary { color: var(--muted); margin: 0 0 16px; max-width: 74ch; }
+  .panel .ppath { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+
+  /* Diff */
+  .hunk { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 12px 0; }
+  .hunk .hh { background: #0b1a2b; color: var(--accent); padding: 4px 12px; font-size: 12px; }
+  .dline { display: flex; white-space: pre; font-size: 12.5px; }
+  .dline .sign { width: 22px; text-align: center; user-select: none; flex: none; }
+  .dline .txt { flex: 1; padding-right: 12px; }
+  .dline.add { background: var(--add-bg); } .dline.add .sign { color: var(--add-fg); background: var(--add-gutter); }
+  .dline.del { background: var(--del-bg); } .dline.del .sign { color: var(--del-fg); background: var(--del-gutter); }
+  .dline.ctx .sign { color: var(--muted); }
+  .binary { color: var(--muted); font-style: italic; padding: 10px 12px; }
+
+  .wireframe-box { border: 1px dashed var(--tag-wf); border-radius: 8px; padding: 16px; margin: 12px 0; background: #0f0b12; }
+  .offnote { color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+  /* highlight.js token colors — OWN CSS (no CDN theme). hljs (from CDN) only adds
+     the class names; these rules color them, so no extra network dependency. */
+  .hljs-keyword, .hljs-built_in, .hljs-literal { color: #ff7b72; }
+  .hljs-string, .hljs-regexp { color: #a5d6ff; }
+  .hljs-number { color: #79c0ff; }
+  .hljs-comment { color: #8b949e; font-style: italic; }
+  .hljs-title, .hljs-title.function_, .hljs-section { color: #d2a8ff; }
+  .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-property { color: #79c0ff; }
+  .hljs-type, .hljs-class .hljs-title { color: #ffa657; }
+  .hljs-tag, .hljs-name { color: #7ee787; }
+  .hljs-meta { color: #8b949e; }
+</style>
+
+<!-- ENHANCEMENTS via CDN, pinned + SRI. If offline they fail closed and the page
+     degrades gracefully (see render script): diffs keep add/del colors, diagrams
+     fall back to their Mermaid source. -->
+<script defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"
+      integrity="sha512-EBLzUL8XLl+va/zAsmXwS7Z2B1F9HUHkZwyS/VKwh3S7T/U0nF4BaU29EP/ZSf6zgiIxYAnKLu6bJ8dqpmX5uw=="
+      crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js"
+      integrity="sha512-5TKaYvhenABhlGIKSxAWLFJBZCSQw7HTV7aL1dJcBokM/+3PNtfgJFlv8E6Us/B1VMlQ4u8sPzjudL9TEQ06ww=="
+      crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<!-- The review payload: window.REVIEW_DATA. Loaded via <script src> so it works
+     under file:// (a file:// page cannot fetch() a sibling .json). -->
+<script defer src="./review-data.js"></script>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+window.addEventListener("load", function () {
+  var D = window.REVIEW_DATA;
+  var app = document.getElementById("app");
+  if (!D) { app.innerHTML = "<p class='placeholder'>review-data.js not loaded.</p>"; return; }
+
+  var HAS_HLJS = typeof window.hljs !== "undefined";
+  var HAS_MERMAID = typeof window.mermaid !== "undefined";
+
+  function esc(s) { return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function el(html) { var t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function langFor(path) {
+    var m = /\.([a-z0-9]+)$/i.exec(path || ""); if (!m) return null;
+    var map = { ts:"typescript", tsx:"typescript", js:"javascript", jsx:"javascript", mjs:"javascript",
+      py:"python", rb:"ruby", go:"go", rs:"rust", java:"java", kt:"kotlin", php:"php", cs:"csharp",
+      sql:"sql", graphql:"graphql", gql:"graphql", css:"css", scss:"scss", html:"xml", vue:"xml",
+      json:"json", yml:"yaml", yaml:"yaml", sh:"bash", md:"markdown" };
+    return map[m[1].toLowerCase()] || null;
+  }
+  function highlight(code, lang) {
+    if (HAS_HLJS && lang) { try { return window.hljs.highlight(code, { language: lang }).value; } catch (e) {} }
+    return esc(code);
+  }
+  var fileByPath = {}; (D.files || []).forEach(function (f) { fileByPath[f.path] = f; });
+
+  // ---- header ----
+  var m = D.meta || {};
+  app.appendChild(el(
+    "<header class='hd'>" +
+    "<h1>Distillation Review</h1>" +
+    "<div class='meta'><span class='ref'>" + esc(m.branch) + "</span> vs <span class='ref'>" + esc(m.base) + "</span>" +
+    " · merge-base <span class='mono'>" + esc(m.mergeBase) + "</span> · HEAD <span class='mono'>" + esc(m.headSha) + "</span></div>" +
+    "<div class='counts'><span>" + (m.fileCount || 0) + " files</span>" +
+    "<span class='add'>+" + (m.totalAdded || 0) + "</span><span class='del'>−" + (m.totalRemoved || 0) + "</span></div>" +
+    "</header>"
+  ));
+
+  // ---- narrative ----
+  var narr = document.createElement("section");
+  narr.innerHTML = "<h2 class='sec'>Overview</h2>";
+  if (D.narrative) {
+    var paras = Array.isArray(D.narrative) ? D.narrative : String(D.narrative).split(/\n\n+/);
+    var box = el("<div class='narrative'></div>");
+    paras.forEach(function (p) { box.appendChild(el("<p>" + esc(p) + "</p>")); });
+    narr.appendChild(box);
+  } else { narr.appendChild(el("<p class='placeholder'>No narrative yet.</p>")); }
+  app.appendChild(narr);
+
+  // ---- diagram ----
+  if (D.diagram && D.diagram.mermaid) {
+    var dsec = document.createElement("section");
+    dsec.innerHTML = "<h2 class='sec'>Diagram</h2>";
+    var wrap = el("<div class='diagram'></div>");
+    if (D.diagram.title) wrap.appendChild(el("<div class='dtitle'>" + esc(D.diagram.title) + "</div>"));
+    if (HAS_MERMAID) {
+      var host = el("<div class='mermaid'>" + esc(D.diagram.mermaid) + "</div>");
+      wrap.appendChild(host);
+      dsec.appendChild(wrap); app.appendChild(dsec);
+      try {
+        window.mermaid.initialize({ startOnLoad: false, theme: "dark" });
+        window.mermaid.run({ nodes: [host] });
+      } catch (e) { wrap.appendChild(el("<div class='offnote'>Diagram failed to render.</div>")); }
+    } else {
+      wrap.appendChild(el("<pre class='mono'>" + esc(D.diagram.mermaid) + "</pre>"));
+      wrap.appendChild(el("<div class='offnote'>Mermaid unavailable (offline) — showing source.</div>"));
+      dsec.appendChild(wrap); app.appendChild(dsec);
+    }
+  }
+
+  // ---- file tree ----
+  var tsec = document.createElement("section");
+  tsec.innerHTML = "<h2 class='sec'>Files changed</h2>";
+  var tree = el("<div class='tree'></div>");
+  (D.files || []).forEach(function (f) {
+    var st = (f.status || "M").charAt(0);
+    var tag = f.hint ? "<span class='tag " + f.hint + "'>" + f.hint + "</span>" : "";
+    tree.appendChild(el(
+      "<div class='row'><span class='st " + st + "'>" + st + "</span>" +
+      "<span class='path mono'>" + esc(f.path) + "</span>" + tag +
+      "<span class='nums'><span class='p'>+" + f.added + "</span> <span class='m'>−" + f.removed + "</span></span></div>"
+    ));
+  });
+  tsec.appendChild(tree); app.appendChild(tsec);
+
+  // ---- key changes (tabs) ----
+  var ksec = document.createElement("section");
+  ksec.innerHTML = "<h2 class='sec'>Key changes</h2>";
+  var kc = (D.keyChanges && D.keyChanges.length) ? D.keyChanges : null;
+  if (!kc) {
+    ksec.appendChild(el("<p class='placeholder'>No key changes curated yet.</p>"));
+    app.appendChild(ksec); return;
+  }
+
+  var tabs = el("<div class='tabs'></div>");
+  var panelHost = el("<div id='panelHost'></div>");
+  ksec.appendChild(tabs); ksec.appendChild(panelHost); app.appendChild(ksec);
+
+  function renderDiff(f) {
+    if (!f) return el("<p class='placeholder'>File not found in diff.</p>");
+    if (f.binary) return el("<div class='binary'>Binary file — no textual diff.</div>");
+    var lang = langFor(f.path);
+    var frag = document.createDocumentFragment();
+    (f.hunks || []).forEach(function (h) {
+      var hk = el("<div class='hunk'></div>");
+      hk.appendChild(el("<div class='hh mono'>" + esc(h.header) + "</div>"));
+      h.lines.forEach(function (ln) {
+        var sign = ln.t === "add" ? "+" : ln.t === "del" ? "−" : " ";
+        var row = el("<div class='dline " + ln.t + " mono'><span class='sign'>" + sign + "</span><span class='txt'></span></div>");
+        row.querySelector(".txt").innerHTML = highlight(ln.text, lang);
+        hk.appendChild(row);
+      });
+      frag.appendChild(hk);
+    });
+    return frag;
+  }
+
+  kc.forEach(function (change, i) {
+    var bt = change.blockType || "diff";
+    var btn = el("<button" + (i === 0 ? " class='active'" : "") + ">" + esc(change.title || change.path || ("Change " + (i + 1))) + "</button>");
+    var panel = el("<div class='panel'" + (i === 0 ? "" : " style='display:none'") + "></div>");
+    panel.appendChild(el("<h3 class='ptitle'>" + esc(change.title || change.path) + " <span class='tag " + bt + "'>" + bt + "</span></h3>"));
+    if (change.path) panel.appendChild(el("<div class='ppath mono'>" + esc(change.path) + "</div>"));
+    if (change.summary) panel.appendChild(el("<p class='psummary'>" + esc(change.summary) + "</p>"));
+    if (bt === "wireframe" && change.wireframeHtml) {
+      var wf = el("<div class='wireframe-box'></div>"); wf.innerHTML = change.wireframeHtml; panel.appendChild(wf);
+    }
+    panel.appendChild(renderDiff(fileByPath[change.path]));
+    tabs.appendChild(btn); panelHost.appendChild(panel);
+    btn.addEventListener("click", function () {
+      Array.prototype.forEach.call(tabs.children, function (b) { b.classList.remove("active"); });
+      Array.prototype.forEach.call(panelHost.children, function (p) { p.style.display = "none"; });
+      btn.classList.add("active"); panel.style.display = "";
+    });
+  });
+});
+</script>
+</body>
+</html>
