@@ -262,8 +262,12 @@ if [[ $LINK_ALL -eq 0 && -t 0 && -t 1 ]]; then
         exit 130
     fi
 else
-    # --all, or non-interactive (piped/CI): link everything.
-    for ((i = 0; i < ${#DIRS[@]}; i++)); do SELECTED[i]=1; done
+    # --all, or non-interactive (piped/CI): link every READY skill, but never
+    # the `in-progress` category — those are unfinished and must be linked
+    # deliberately through the interactive TUI. See MAINTAINING.md.
+    for ((i = 0; i < ${#DIRS[@]}; i++)); do
+        if [[ "${LABELS[i]%%/*}" == "in-progress" ]]; then SELECTED[i]=0; else SELECTED[i]=1; fi
+    done
 fi
 
 step "Ensuring ~/.claude/ structure"
@@ -273,7 +277,14 @@ ok "$TARGET_DIR"
 step "Linking skills"
 linked=0
 for ((i = 0; i < ${#DIRS[@]}; i++)); do
-    [[ "${SELECTED[i]}" -eq 1 ]] || { skip "${LABELS[i]} (not selected)"; continue; }
+    if [[ "${SELECTED[i]}" -ne 1 ]]; then
+        if [[ "${LABELS[i]%%/*}" == "in-progress" ]]; then
+            skip "${LABELS[i]} (in-progress — select it in the TUI to link)"
+        else
+            skip "${LABELS[i]} (not selected)"
+        fi
+        continue
+    fi
     link_if_safe "${DIRS[i]}" "$TARGET_DIR/skills/${NAMES[i]}" "${LABELS[i]}"
     linked=$((linked + 1))
 done

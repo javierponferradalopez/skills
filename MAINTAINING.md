@@ -50,6 +50,14 @@ Two consumers rely on this layout:
 - `bin/dev-link` — flattens the categories into symlinks under `~/.claude/skills/`
   (see below).
 
+### The `in-progress` category
+
+`skills/in-progress/` is a holding pen for skills that are still being built and
+are **not ready to ship**.
+
+When a skill graduates, move its folder out to the appropriate ready category
+(`engineer` / `productivity`) and add it to the README catalog.
+
 ---
 
 ## Local development — `bin/dev-link`
