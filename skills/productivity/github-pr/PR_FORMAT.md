@@ -2,53 +2,59 @@
 
 ## Title — Conventional Commits
 
-- Format: `type(scope): concise, user-facing summary`
-- Examples: `feat(api): add rate-limited search endpoint`, `fix(web): resolve 500 on profile save`
+- Format: `type(scope): concise, user-facing summary` — e.g. `feat(api): add rate-limited search endpoint`.
 - Pick the dominant commit type; if mixed, choose the most impactful user-visible change (priority: feat, fix, perf, refactor, others).
 
-## Description — Markdown, no fluff
+## Description — Markdown, skimmable
 
-Rules: use `##` and below (NO `#`). No raw diffs. No code blocks in the body. Each bullet short. Infer the business "why" from the technical changes.
+Use `##` and below (NO `#`). Never paste diffs or code snippets from the PR — the reviewer already has the diff. Mermaid and file-tree blocks ARE allowed and encouraged where they help. The goal: a reviewer who grasps problem and solution at a glance and can skip the parts of the diff a diagram already explained.
 
 ```markdown
 ## Problem
 
-If a task/issue URL was provided, include it as the first line: `This PR resolves <task-url>`. Otherwise omit this line.
+First line, only if a tracker reference exists: `This PR resolves <ref>`.
 
-[Infer the problem being solved from the commits and changes — the business need or technical requirement that motivated them.]
+[The business need or technical requirement behind the change.]
 
 ## Solution
 
-[Explain the changes useful to the reviewer, without redundant technical detail already visible in the diff.]
-
-- **[Category of changes]**
-    - [Specific implementation detail]
-    - [Another relevant detail]
-
-### Commits (required)
-> Review each commit individually for easier navigation:
-
-| Commit | Summary |
-|--------|---------|
-| [`abc1234`](https://github.com/owner/repo/commit/full_sha) | Adds input validation for email and password to prevent malformed data reaching the API |
-| [`def5678`](https://github.com/owner/repo/commit/full_sha) | Refactors the auth service to use dependency injection, improving testability |
-
-*(List all commits oldest → newest. Write a human-friendly summary of what each does based on the actual changes, NOT just the commit message — focus on purpose and impact.)*
-
-### Technical Implementation (if not covered above)
-- 3–6 crisp bullets on key design/architecture decisions, tradeoffs, or constraints.
+[Compose freely — prose, diagrams, or both, in whatever order communicates fastest. Give the reviewer what they need to navigate the change and the key decisions behind it, without restating detail visible in the diff.]
 
 ### Testing
-- ✅ What was tested (unit, integration, e2e).
-- ✅ Relevant QA steps or manual verification.
-- ❌ What was not tested, if applicable.
-- ❌ Known limitations or risks.
+- ✅ What was tested (unit, integration, e2e) and any manual QA.
+- ❌ What was not tested, known limitations, or risks.
 
 ### Next Steps (only if applicable)
-- Short bullets for follow-ups or stacked PRs.
+- Follow-ups or stacked PRs.
 
-### Related (ONLY if there are PR/issue references or stacked PR links — if the only reference would be the task URL already at the top of Problem, OMIT this entire section)
-- PR/issue references discovered (e.g. `#123`, `#456`) and links to dependent/parent PRs if stacked.
+### Related (only if there are PR/issue cross-references or stacked-PR links beyond the tracker reference already in Problem)
+- Discovered references (e.g. `#123`) and links to dependent/parent PRs.
 ```
 
-Do NOT add the current branch name or repeat the task URL in **Related** — it's redundant.
+## Graphics in the Solution
+
+Use a graphic only when it communicates faster than the prose it replaces — otherwise it's noise. Typical cases (illustrative, not a checklist):
+
+- **File-tree block** — directories created, moved, or renamed:
+
+  ```
+  src/
+  ├── auth/           # new: extracted from user/
+  │   ├── login.ts
+  │   └── session.ts
+  └── user/
+      └── profile.ts
+  ```
+
+- **Mermaid flowchart** — a control flow or decision path changed:
+
+  ```mermaid
+  flowchart LR
+    Request --> Auth{Authenticated?}
+    Auth -->|no| Reject
+    Auth -->|yes| Handler
+  ```
+
+- **Mermaid sequence / state diagram** — the interaction between services or a lifecycle changed.
+
+GitHub renders ` ```mermaid ` blocks natively, so they show as images, not code.
