@@ -4,6 +4,16 @@ Issues and specs for this repo live as ClickUp tasks, used as a three-level hier
 
 Operations go through the **ClickUp MCP server** (`mcp__claude_ai_ClickUp__*`). The exact tool set is discovered on demand: run `ToolSearch` with a query like `clickup task` to load the schemas, authenticate first if prompted, then call the tools. For headless/cron runs where the MCP server is unavailable, fall back to the ClickUp REST API with a `CLICKUP_API_TOKEN`.
 
+## Conventions
+
+- **Create a task / subtask**: `clickup_create_task`. Pass the `parent` task id to make it a subtask (this is how the hierarchy below is built) — the skills never create top-level tasks.
+- **Read a task**: `clickup_get_task`, plus `clickup_get_task_comments` (or `clickup_get_threaded_comments`) for the conversation history.
+- **List / query tasks**: `clickup_filter_tasks`, scoped to a parent or List.
+- **Comment on a task**: `clickup_create_comment`.
+- **Update a task** (status, assignee, tags): `clickup_update_task`; tags via `clickup_add_tag_to_task` / `clickup_remove_tag_from_task`.
+- **Dependencies**: `clickup_add_task_dependency` (blocking / waiting on) using real task ids.
+- **Resolve a custom ID** (`GEN-142`) to an internal task id: `clickup_search`, then use the returned id.
+
 ## Hierarchy
 
 Three levels, relying on ClickUp **nested subtasks**:
