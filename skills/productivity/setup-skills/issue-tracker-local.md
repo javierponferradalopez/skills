@@ -1,11 +1,11 @@
 # Issue tracker: Local Markdown
 
-Issues and PRDs for this repo live as markdown files in `.scratch/`.
+Issues and specs for this repo live as markdown files in `.scratch/`.
 
 ## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`
-- The PRD is `.scratch/<feature-slug>/PRD.md`
+- The spec is `.scratch/<feature-slug>/spec.md`
 - Implementation issues are `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
 
