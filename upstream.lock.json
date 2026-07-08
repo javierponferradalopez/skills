@@ -10,7 +10,7 @@
       "upstream": "matt",
       "mine": "skills/engineer/grill-me",
       "source": "skills/productivity/grilling",
-      "base": "8370e76",
+      "base": "16a2a5c",
       "mode": "modified"
     },
     "matt:grill-with-docs": {
@@ -24,7 +24,7 @@
       "upstream": "matt",
       "mine": "skills/engineer/tdd",
       "source": "skills/engineering/tdd",
-      "base": "6eeb81b",
+      "base": "16a2a5c",
       "mode": "modified"
     },
     "matt:handoff": {
@@ -45,7 +45,7 @@
       "upstream": "matt",
       "mine": "skills/engineer/to-issues",
       "source": "skills/engineering/to-issues",
-      "base": "6eeb81b",
+      "base": "16a2a5c",
       "mode": "modified"
     },
     "matt:teach": {
@@ -66,14 +66,14 @@
       "upstream": "matt",
       "mine": "skills/productivity/setup-skills",
       "source": "skills/engineering/setup-matt-pocock-skills",
-      "base": "6eeb81b",
+      "base": "16a2a5c",
       "mode": "modified"
     },
     "matt:writing-great-skills": {
       "upstream": "matt",
       "mine": "skills/productivity/write-a-skill",
       "source": "skills/productivity/writing-great-skills",
-      "base": "5d78bd0",
+      "base": "16a2a5c",
       "mode": "modified"
     },
     "matt:domain-modeling": {
@@ -94,8 +94,15 @@
       "upstream": "matt",
       "mine": "skills/engineer/wayfinder",
       "source": "skills/in-progress/wayfinder",
-      "base": "1445797",
+      "base": "16a2a5c",
       "mode": "pure"
+    },
+    "matt:code-review": {
+      "upstream": "matt",
+      "mine": "skills/engineer/code-review",
+      "source": "skills/engineering/code-review",
+      "base": "16a2a5c",
+      "mode": "modified"
     }
   }
 }

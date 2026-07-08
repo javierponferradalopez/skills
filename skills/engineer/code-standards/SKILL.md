@@ -45,6 +45,29 @@ guarding against them at every call site.
 - **Conceptual integrity.** Solve the same kind of problem the same way sibling modules
   do. Coherence across the system beats any single clever feature.
 
+## Code smells
+
+A checklist to sweep changed code against (Fowler, _Refactoring_, ch.3). Each smell is a
+labelled judgement call — flag it as _possible_ X, never a hard violation — and skip
+anything tooling already enforces. Three of these already live above: **Mysterious Name**
+is the naming demand of _Interface design_ (a name that doesn't reveal what it does or
+holds → rename; if no honest name comes, the design's murky); **Speculative Generality**
+and **Duplicated Code** are the two halves of _Restraint_ — extract a repeated shape when
+both sites change for the **same** reason, but leave look-alikes that change for
+**different** reasons alone (the wrong abstraction costs more than duplication).
+
+The rest:
+
+- **Feature Envy** — a method that reaches into another object's data more than its own. → move the method onto the data it envies.
+- **Data Clumps** — the same few fields or params keep travelling together (a type wanting to be born). → bundle them into one type, pass that.
+- **Primitive Obsession** — a primitive or string standing in for a domain concept that deserves its own type. → give the concept its own small type.
+- **Repeated Switches** — the same `switch`/`if`-cascade on the same type recurs across the change. → replace with polymorphism, or one map both sites share.
+- **Shotgun Surgery** — one logical change forces scattered edits across many files. → gather what changes together into one module.
+- **Divergent Change** — one file or module is edited for several unrelated reasons. → split so each module changes for one reason.
+- **Message Chains** — long `a.b().c().d()` navigation the caller shouldn't depend on. → hide the walk behind one method on the first object.
+- **Middle Man** — a class or function that mostly just delegates onward. → cut it, call the real target direct.
+- **Refused Bequest** — a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
+
 ## Comments
 
 **Do not add comments. Code must be self-explanatory.** A comment you're about to
@@ -80,7 +103,7 @@ change entirely; tests shouldn't break unless behavior changed.
   something is hard to test without that, redesign the interface.
 - Don't test trivial one-liners or thin delegation; the test just mirrors the code.
 
-See [references/testing.md](references/testing.md) for GOOD/BAD examples and the full
+See the `tdd` skill for GOOD/BAD examples and the full
 red-flag list.
 
 ## When reviewing
