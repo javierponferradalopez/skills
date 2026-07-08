@@ -260,9 +260,9 @@ bin/skills-upstream pin matt:teach           # lock in the new base
 **2. Catch up several skills at once** — `status` listed more than one:
 
 ```bash
-for s in matt:tdd matt:to-prd matt:handoff; do bin/skills-upstream update "$s"; done
+for s in matt:tdd matt:to-spec matt:handoff; do bin/skills-upstream update "$s"; done
 # review/resolve each, then pin the ones you're happy with
-for s in matt:tdd matt:to-prd matt:handoff; do bin/skills-upstream pin "$s"; done
+for s in matt:tdd matt:to-spec matt:handoff; do bin/skills-upstream pin "$s"; done
 ```
 
 **3. Borrow from a new creator** — register, sync, adopt:
@@ -286,4 +286,4 @@ bin/skills-upstream add alice skills/agents/prototype             # copy + regis
 
 **7. "Did I miss anything?"** — `bin/skills-upstream status` is the single source of truth: green means your copy is synced to its `base`, yellow means the upstream moved on since then.
 
-`update` only touches the one fork you name, so you upgrade exactly what you want and leave the rest frozen. On a `modified` skill, expect conflicts where your local edits overlap the upstream's — that's the safety net working; resolve them by hand. Heavily diverged skills (`grill-me`, `teach`, `grill-with-docs`, `improve-codebase-architecture`) will conflict more often; near-identical ones (`tdd`, `handoff`, `to-prd`, `to-issues`) usually merge clean.
+`update` only touches the one fork you name, so you upgrade exactly what you want and leave the rest frozen. On a `modified` skill, expect conflicts where your local edits overlap the upstream's — that's the safety net working; resolve them by hand. Heavily diverged skills (`grill-me`, `teach`, `grill-with-docs`, `improve-codebase-architecture`) will conflict more often; near-identical ones (`tdd`, `handoff`, `to-spec`, `to-tickets`) usually merge clean.
