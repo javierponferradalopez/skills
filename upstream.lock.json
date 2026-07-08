@@ -31,21 +31,21 @@
       "upstream": "matt",
       "mine": "skills/engineer/handoff",
       "source": "skills/productivity/handoff",
-      "base": "6eeb81b",
+      "base": "d574778",
       "mode": "modified"
     },
-    "matt:to-prd": {
+    "matt:to-spec": {
       "upstream": "matt",
-      "mine": "skills/engineer/to-prd",
-      "source": "skills/engineering/to-prd",
-      "base": "6eeb81b",
+      "mine": "skills/engineer/to-spec",
+      "source": "skills/engineering/to-spec",
+      "base": "d574778",
       "mode": "modified"
     },
-    "matt:to-issues": {
+    "matt:to-tickets": {
       "upstream": "matt",
-      "mine": "skills/engineer/to-issues",
-      "source": "skills/engineering/to-issues",
-      "base": "16a2a5c",
+      "mine": "skills/engineer/to-tickets",
+      "source": "skills/engineering/to-tickets",
+      "base": "d574778",
       "mode": "modified"
     },
     "matt:teach": {
@@ -66,7 +66,7 @@
       "upstream": "matt",
       "mine": "skills/productivity/setup-skills",
       "source": "skills/engineering/setup-matt-pocock-skills",
-      "base": "16a2a5c",
+      "base": "d574778",
       "mode": "modified"
     },
     "matt:writing-great-skills": {
@@ -93,8 +93,8 @@
     "matt:wayfinder": {
       "upstream": "matt",
       "mine": "skills/engineer/wayfinder",
-      "source": "skills/in-progress/wayfinder",
-      "base": "16a2a5c",
+      "source": "skills/engineering/wayfinder",
+      "base": "d574778",
       "mode": "pure"
     },
     "matt:code-review": {
