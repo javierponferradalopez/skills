@@ -12,7 +12,7 @@ Use `##` and below (NO `#`). Never paste diffs or code snippets from the PR — 
 ```markdown
 ## Problem
 
-First line, only if a tracker reference exists: `This PR resolves <ref>`.
+First line, only if a tracker reference exists: `This PR resolves <ref>`. When a ticket URL is available, write `<ref>` as a link: `[<ref>](<url>)`.
 
 [The business need or technical requirement behind the change.]
 
