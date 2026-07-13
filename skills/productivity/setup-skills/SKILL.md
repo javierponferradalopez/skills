@@ -1,6 +1,6 @@
 ---
 name: setup-skills
-description: Sets up an `## Agent skills` block in AGENTS.md/CLAUDE.md and `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub, GitLab, ClickUp, or local markdown), domain doc layout, and observability tooling (Sentry, Grafana). Run as a first-time bootstrap for a repo, or if engineering skills appear to be missing context about the issue tracker, domain docs, or observability.
+description: Sets up an `## Agent skills` block in AGENTS.md/CLAUDE.md and `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub, GitLab, ClickUp, or local markdown), domain doc layout, and error tracking. Run as a first-time bootstrap for a repo, or if engineering skills appear to be missing context about the issue tracker, domain docs, or error tracker.
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ Scaffold the per-repo configuration that the engineering skills assume:
 
 - **Issue tracker** — where issues live (GitHub by default; GitLab, ClickUp, and local markdown are also supported out of the box)
 - **Domain docs** — where `CONTEXT.md` and ADRs live, and the consumer rules for reading them
-- **Observability** — which monitoring tools this repo talks to (Sentry, Grafana), so skills like `diagnose` can pull production signal over MCP. Optional — skip it for repos with no monitoring.
+- **Error tracker** — which error-tracking tool this repo talks to, so skills like `diagnose` can pull production error signal over MCP. Optional — skip it for repos with no error tracking.
 - **Code standards** — a fixed rule telling agents to load the `code-standards` skill so all generated code meets the project's quality bar
 
 This is a prompt-driven skill, not a deterministic script. Explore, present what you found, confirm with the user, then write.
@@ -55,34 +55,33 @@ Confirm the layout:
 - **Single-context** — one `CONTEXT.md` + `docs/adr/` at the repo root. Most repos are this.
 - **Multi-context** — `CONTEXT-MAP.md` at the root pointing to per-context `CONTEXT.md` files (typically a monorepo).
 
-**Section C — Observability.** Optional.
+**Section C — Error tracker.** Optional.
 
-> Explainer: "Observability" is the monitoring tooling this repo talks to. When configured, skills can pull production signal over an error's stack trace from Sentry, a metric baseline from Grafana — instead of working blind. Skip this section entirely for a repo with no monitoring; nothing downstream depends on it.
+> Explainer: The "error tracker" is the error-tracking tool this repo talks to. When configured, skills like `diagnose` can pull an error's stack trace, breadcrumbs, and frequency from it — instead of working blind. This is distinct from the **issue tracker** in Section A: the issue tracker is where *work* lives (GitHub Issues, etc.); the error tracker is where *runtime errors* are captured. Skip this section entirely for a repo with no error tracking; nothing downstream depends on it.
 
-Ask **where** observability lives first — it decides how many times you ask the rest:
+Ask **where** the error tracker lives first — it decides how many times you ask the rest:
 
-- **Root** — one `docs/agents/observability.md` for the whole repo. Most repos.
-- **Per-subproject** — each context keeps its own `src/<context>/docs/agents/observability.md`, so a monorepo where subprojects wire to different tooling declares each one separately.
+- **Root** — one `docs/agents/error-tracker.md` for the whole repo. Most repos.
+- **Per-subproject** — each context keeps its own `src/<context>/docs/agents/error-tracker.md`, so a monorepo where subprojects wire to different projects (or different tools) declares each one separately.
 
-This is independent of the domain-doc layout — a single-context repo can still split observability, and a multi-context one can still share one root doc.
+This is independent of the domain-doc layout — a single-context repo can still split its error tracking per subproject, and a multi-context one can still share one root doc.
 
-Then, for **each place** (once at root, or once per subproject the user names), pick its tools — this is **multi-select (1..n)**, and each place can pick a different subset:
+Then, for **each place** (once at root, or once per subproject the user names), pick its **one** error tracker — each place declares a single tool:
 
-- **Sentry** — errors / exceptions (stack traces, breadcrumbs, frequency).
-- **Grafana** — metrics, logs, and traces (dashboards, Loki/Prometheus/Tempo).
+- **Sentry** — errors / exceptions (stack traces, breadcrumbs, frequency). The tool shipped with a seed template.
+- **Other** — a different error tracker (Rollbar, Bugsnag, …). Ask the user to describe in one paragraph what it returns and how it's reached over MCP; the skill records that as freeform prose.
 - **None** — skip this place; write no doc for it.
 
-Connection is **MCP-only** — the user authenticates the MCP server themselves; the skill never handles credentials. For each tool picked, collect its **scope** to bake into that place's doc so skills query the right target, not credentials:
+Connection is **MCP-only** — the user authenticates the MCP server themselves; the skill never handles credentials. For the tool picked, collect its **scope** to bake into that place's doc so skills query the right target, not credentials:
 
 - **Sentry** — the org slug and the project slug(s) this place maps to.
-- **Grafana** — the instance URL and which datasources matter (Loki / Prometheus / Tempo).
 
 ### 3. Confirm and edit
 
 Show the user a draft of:
 
 - The `## Agent skills` block to add to whichever of `CLAUDE.md` / `AGENTS.md` is being edited (see step 4 for selection rules)
-- The contents of `docs/agents/issue-tracker.md` and `docs/agents/domain.md`, plus each observability doc (one at the root, or one per subproject) if any tool was picked
+- The contents of `docs/agents/issue-tracker.md` and `docs/agents/domain.md`, plus each error-tracker doc (one at the root, or one per subproject) if a tool was picked
 
 Let them edit before writing.
 
@@ -111,16 +110,16 @@ The block:
 
 [one-line summary of layout — "single-context" or "multi-context"]. See `docs/agents/domain.md`.
 
-### Observability
+### Error tracker
 
-[one-line summary of the tools picked — e.g. "Sentry (errors) + Grafana (metrics/logs)"]. [If root: `See docs/agents/observability.md`.] [If per-subproject: `Configured per-subproject — each context declares its own tools in src/<context>/docs/agents/observability.md`.]
+[one-line summary of the tool picked — e.g. "Sentry (errors)"]. [If root: `See docs/agents/error-tracker.md`.] [If per-subproject: `Configured per-subproject — each context declares its own tool in src/<context>/docs/agents/error-tracker.md`.]
 
 ### Code standards
 
 Before writing or modifying code, load the `code-standards` skill and hold all generated code to it.
 ```
 
-Omit the `### Observability` sub-section entirely when no observability tool was picked — don't leave an empty heading.
+Omit the `### Error tracker` sub-section entirely when no error tracker was picked — don't leave an empty heading.
 
 Then write the docs files using the seed templates in this skill folder as a starting point:
 
@@ -129,13 +128,12 @@ Then write the docs files using the seed templates in this skill folder as a sta
 - [issue-tracker-clickup.md](./issue-tracker-clickup.md) — ClickUp issue tracker
 - [issue-tracker-local.md](./issue-tracker-local.md) — local-markdown issue tracker
 - [domain.md](./domain.md) — domain doc consumer rules + layout
-- [observability-sentry.md](./observability-sentry.md) — Sentry error tracking
-- [observability-grafana.md](./observability-grafana.md) — Grafana metrics/logs/traces
+- [error-tracker-sentry.md](./error-tracker-sentry.md) — Sentry error tracking
 
 For "other" issue trackers, write `docs/agents/issue-tracker.md` from scratch using the user's description.
 
-**Observability doc(s).** Write one doc **per place** picked in Section C — at the root, `docs/agents/observability.md`; per-subproject, one `src/<context>/docs/agents/observability.md` per subproject. Each doc is built the same way: concatenate the seed template for each tool **that place** picked (one `# Observability: <tool>` section per tool — this is the 1..n shape), filling the `<...>` scope placeholders with that place's org/project/URL/datasources and leaving the MCP connection wording as-is. A place that picked **None** gets no doc.
+**Error-tracker doc(s).** Write one doc **per place** picked in Section C — at the root, `docs/agents/error-tracker.md`; per-subproject, one `src/<context>/docs/agents/error-tracker.md` per subproject. Each doc holds a single `# Error tracker: <tool>` section built from that place's seed template, filling the `<...>` scope placeholders with that place's org/project and leaving the MCP connection wording as-is. For an **Other** tool, write the section from scratch using the user's description. A place that picked **None** gets no doc.
 
 ### 5. Done
 
-Tell the user the setup is complete. Mention they can edit `docs/agents/*.md` directly later — re-running this skill is only necessary if they want to switch issue trackers, change observability tooling, or restart from scratch.
+Tell the user the setup is complete. Mention they can edit `docs/agents/*.md` directly later — re-running this skill is only necessary if they want to switch issue trackers, change the error tracker, or restart from scratch.

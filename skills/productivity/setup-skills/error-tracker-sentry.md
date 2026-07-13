@@ -1,4 +1,4 @@
-# Observability: Sentry
+# Error tracker: Sentry
 
 Sentry is this repo's source for **errors and exceptions** in production — stack traces, breadcrumbs, affected releases, and how often an issue fires.
 
