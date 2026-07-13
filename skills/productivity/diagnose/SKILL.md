@@ -1,6 +1,6 @@
 ---
 name: diagnose
-description: Diagnosis loop for hard bugs and performance regressions. Use when the user says "diagnose"/"debug this", or reports something broken/throwing/failing/slow.
+description: Diagnosis loop for hard bugs and performance regressions. Use when the user says "diagnose"/"debug this", reports something broken/throwing/failing/slow, or shares an error-tracker link (e.g. Sentry) to investigate.
 ---
 
 # Diagnosing Bugs
@@ -8,6 +8,17 @@ description: Diagnosis loop for hard bugs and performance regressions. Use when 
 A discipline for hard bugs. Skip phases only when explicitly justified.
 
 When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
+
+## Intake — pull error signal
+
+If the `## Agent skills` section names no **error tracker**, skip this intake and go to Phase 1. Otherwise it points at the error-tracker doc as configured by `/setup-skills` — read the one covering the context the bug sits in. That doc is the source of truth for which tool is configured, what it returns, and how to reach it over MCP.
+
+Two ways in, following that doc:
+
+- **A reference** the user shared — an issue in the configured error tracker. Fetch it and let it **seed Phase 1**: it's a captured trace to replay, not a hypothesis to trust.
+- **Prose** describing a symptom — search the configured error tracker for the matching issue before building the loop.
+
+What you pull also feeds **Phase 3**, re-ranking hypotheses cheaply. Signal points you at the bug; Phase 1 still has to go **red** on it.
 
 ## Phase 1 — Build a feedback loop
 
