@@ -55,6 +55,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 
 | Skill                                              | Use when                                                                                                                                  |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| [`catch-up`](./skills/productivity/catch-up/SKILL.md)           | Catching up on delegated work after time away (or as a lead) — recurses a ticket's subtasks, matches each to its PRs/branches by identifier via fan-out subagents, and reports what changed since an anchor date as a temp markdown briefing. |
 | [`diagnose`](./skills/productivity/diagnose/SKILL.md)           | Hard bugs, unclear regressions, perf problems: reproduce → minimise → hypothesise → instrument → fix → regression-test.                   |
 | [`improve-codebase-architecture`](./skills/productivity/improve-codebase-architecture/SKILL.md) | Finding deepening opportunities in a codebase — turning shallow modules into deep ones for testability and AI-navigability, presented as a visual before/after HTML report informed by `CONTEXT.md` and ADRs. |
 | [`zoom-out`](./skills/productivity/zoom-out/SKILL.md)           | Stepping back for broader context or a higher-level perspective on an unfamiliar section of code.                                         |
