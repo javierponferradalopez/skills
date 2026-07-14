@@ -11,7 +11,7 @@ Brief the user on work they left in the team's hands — reconstructing the stat
 Three leading ideas run through the skill:
 
 - **Anchor** — the date the catch-up counts from. In **delta** mode it filters every source to what changed since; in **full** mode there is no filter and you report the whole state from the start.
-- **State ladder** — each task sits on one rung: _nothing_ → _branch, no PR_ → _open PR_ → _merged PR_. The ladder is the spine of the report.
+- **State ladder** — each task sits on one rung: _nothing_ → _branch, no PR_ → _open PR_ → _merged PR_. The ladder is how the briefing renders where each task rests now.
 - **Delegate the noise** — the main agent only orchestrates and synthesises. Every noisy search, match, and read happens in a subagent that returns a distilled finding, so the main context never fills with raw PR lists, diffs, or comment threads.
 
 ## Step 1 — Frame the catch-up
@@ -43,17 +43,8 @@ Each subagent, for its identifier, must:
 
 ## Step 4 — Synthesise the briefing
 
-Write a markdown file to the **OS temp directory** — never into the repo, and don't write back to the tracker.
+Synthesise the findings into a **self-contained HTML briefing** written to the **OS temp directory** — never into the repo, and don't write back to the tracker. It's an ephemeral, read-only artifact: one scroll the user reads once.
 
-**Every reference is a link.** Each PR, commit, branch, and ticket named in the report renders as a clickable markdown link to its URL (`[PD-123](…)`, `[#482](…)`, `[a1b2c3d](…)`) — never a bare identifier. A reference whose URL the finding didn't carry stays plain text and is called out under blind spots.
+Follow [`BRIEFING-FORMAT.md`](BRIEFING-FORMAT.md) for structure and house style. Its spine is a **timeline** of what changed since the anchor — the point of a delta catch-up is the change, not the static state — and every beat is a sourced event, so the storytelling never outruns what a finding can prove.
 
-**Draw the tree when it beats prose.** For an epic with several subtasks, a Mermaid diagram of the subtask tree coloured by rung shows the overall state faster than a list can — put one under the headline. For a single ticket or a handful, prose is clearer; skip it. Same restraint for any graphic: it earns its place only when it reads faster than the words it replaces. Note that Mermaid renders only in Mermaid-aware viewers (VS Code, Obsidian, GitHub preview); in a plain viewer it shows as a code block.
-
-Structure it:
-
-1. **Headline** — the overall state of the epic in a sentence or two.
-2. **Per-subtask breakdown** — each task on its rung, with its PRs/branches linked.
-3. **What changed since `<anchor>`** — decisions, blockers, scope changes, who did what. This is the point of a delta catch-up; lead with the change, not the static state.
-4. **Blind spots** — sources not reached, tasks with no cited identifier, anything the report can't vouch for.
-
-Then show the user a short summary and the file path, and **stop**. Read-only, one-shot.
+Then open it for the user with a single command (`open <path>`), show a short summary, and **stop**. Read-only, one-shot.
