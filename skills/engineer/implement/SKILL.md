@@ -20,7 +20,6 @@ The issue tracker convention should already be in your context — run
 and comments**, and pull in its parent PRD if it has one.
 
 ## 2. Load context
-name: implement
 
 Before writing code, read the project's own bar and shape:
 
@@ -35,18 +34,17 @@ code. Don't restate standards here — that skill owns them.
 
 ## 4. Implement (TDD where feasible)
 
-Derive the behaviors to build from the issue's **acceptance criteria**. Apply
-red-green-refactor where it's feasible — one cycle at a time:
+Derive the behaviors to build from the issue's **acceptance criteria**, then
+apply red-green where feasible: red → green, one vertical slice per cycle,
+cleaning up against the code-standards bar once green.
 
-1. **RED** — write one failing test for the next behavior.
-2. **GREEN** — implement just enough to pass it. Never refactor while RED.
-3. **REPEAT** — next test responds to what the last cycle taught you. Don't
-   write all the tests up front.
-4. **REFACTOR** — once green, clean up against the code-standards bar.
+The `tdd` skill holds the loop's discipline — read it for reference, but
+**don't invoke `/tdd`**: it runs an interactive seam-confirmation gate that
+doesn't belong in this autonomous flow. Pick the seams yourself from the
+acceptance criteria.
 
-Embody this discipline directly. **Do not invoke the `tdd` skill** — its
-interactive planning gate isn't wanted here. Where TDD doesn't fit, just build
-it well; a later review pass is the safety net that adds tests.
+Where TDD doesn't fit, just build it well; a later review pass is the safety
+net that adds tests.
 
 ## 5. Autonomy & escalation
 
