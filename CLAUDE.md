@@ -1,6 +1,6 @@
 ## Agent skills
 
-Before creating, editing, or otherwise managing any skill in this project, see `write-a-skill` skill — it holds the rules and conventions you must follow.
+Before creating, editing, or otherwise managing any skill in this project, see `writing-for-agents` skill — it holds the rules and conventions you must follow.
 
 ### Issue tracker
 

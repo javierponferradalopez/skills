@@ -63,7 +63,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 | [`github-pr`](./skills/productivity/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
 | [`suggest-reviewers`](./skills/productivity/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
 | [`setup-skills`](./skills/productivity/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md` plus `docs/agents/` so the engineering skills know its issue tracker, domain-doc layout, and error tracking. |
-| [`write-a-skill`](./skills/productivity/write-a-skill/SKILL.md) | Adding, writing, or reworking a harness skill; formalizing a procedure you keep repeating by hand.                                        |
+| [`writing-for-agents`](./skills/productivity/writing-for-agents/SKILL.md) | Writing any document an agent consumes — a skill, an `AGENTS.md`/`CLAUDE.md`, a doc reached by a pointer: context pointers, progressive disclosure, and the levers that keep a run predictable, plus `SKILL-MECHANICS.md` for skill frontmatter and invocation. |
 | [`teach`](./skills/productivity/teach/SKILL.md)                 | Learning a topic over multiple sessions — turns the current directory into a teaching workspace with a mission, citation-backed HTML lessons, reference cheat-sheets, and learning records. |
 
 ---
