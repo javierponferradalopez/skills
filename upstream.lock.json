@@ -6,13 +6,6 @@
     }
   },
   "skills": {
-    "matt:grill-me": {
-      "upstream": "matt",
-      "mine": "skills/engineer/grill-me",
-      "source": "skills/productivity/grilling",
-      "base": "84fdeff",
-      "mode": "modified"
-    },
     "matt:grill-with-docs": {
       "upstream": "matt",
       "mine": "skills/engineer/grill-me-with-docs",

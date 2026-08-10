@@ -140,7 +140,7 @@ Many skills here are **forked from other creators** — today [Matt Pocock's ski
 
 Each origin is an **upstream** with a short **key** (e.g. `matt`). Every fork records which key it came from and is addressed by a namespaced **manifest key** `<upstream>:<name>` (e.g. `matt:teach`) — so two creators can ship a skill of the same name without colliding. That manifest key is tool-facing only; the name you *invoke* a skill with still comes from its `SKILL.md` frontmatter.
 
-You only need this section if you want to keep your forked skills up to date. Skills you authored yourself (`implement`, `validate`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`, `validate-business-idea`, `catch-up`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
+You only need this section if you want to keep your forked skills up to date. Skills you authored yourself (`implement`, `validate`, `grill-me`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`, `validate-business-idea`, `catch-up`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
 
 ### Quick reference — find your need
 
@@ -286,4 +286,4 @@ bin/skills-upstream add alice skills/agents/prototype             # copy + regis
 
 **7. "Did I miss anything?"** — `bin/skills-upstream status` is the single source of truth: green means your copy is synced to its `base`, yellow means the upstream moved on since then.
 
-`update` only touches the one fork you name, so you upgrade exactly what you want and leave the rest frozen. On a `modified` skill, expect conflicts where your local edits overlap the upstream's — that's the safety net working; resolve them by hand. Heavily diverged skills (`grill-me`, `teach`, `grill-with-docs`, `improve-codebase-architecture`) will conflict more often; near-identical ones (`tdd`, `handoff`, `to-spec`, `to-tickets`) usually merge clean.
+`update` only touches the one fork you name, so you upgrade exactly what you want and leave the rest frozen. On a `modified` skill, expect conflicts where your local edits overlap the upstream's — that's the safety net working; resolve them by hand. Heavily diverged skills (`teach`, `grill-with-docs`, `improve-codebase-architecture`) will conflict more often; near-identical ones (`tdd`, `handoff`, `to-spec`, `to-tickets`) usually merge clean.
