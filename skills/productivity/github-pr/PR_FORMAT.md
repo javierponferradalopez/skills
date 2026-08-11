@@ -20,15 +20,27 @@ First line, only if a tracker reference exists: `This PR resolves <ref>`. When a
 
 [Compose freely — prose, diagrams, or both, in whatever order communicates fastest. Give the reviewer what they need to navigate the change and the key decisions behind it, without restating detail visible in the diff.]
 
-### Testing
+<details>
+<summary><b>Testing</b></summary>
+
 - ✅ What was tested (unit, integration, e2e) and any manual QA.
 - ❌ What was not tested, known limitations, or risks.
 
-### Next Steps (only if applicable)
+</details>
+
+<details>
+<summary><b>Next Steps (only if applicable)</b></summary>
+
 - Follow-ups or stacked PRs.
 
-### Related (only if there are PR/issue cross-references or stacked-PR links beyond the tracker reference already in Problem)
+</details>
+
+<details>
+<summary><b>Related (only if there are PR/issue cross-references or stacked-PR links beyond the tracker reference already in Problem)</b></summary>
+
 - Discovered references (e.g. `#123`) and links to dependent/parent PRs.
+
+</details>
 ```
 
 ## Graphics in the Solution
