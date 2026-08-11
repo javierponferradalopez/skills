@@ -24,8 +24,10 @@ including the very session that built the ticket.
 
 Launch one `general-purpose` subagent and hand it:
 
-- the issue reference (`#N`, URL, or path) **exactly as given**, and
-- the absolute path to `REVIEW.md` in this skill's directory.
+- the issue reference (`#N`, URL, or path) **exactly as given**,
+- the absolute path to `REVIEW.md` in this skill's directory, and
+- **the language for the report — the user's configured language, named
+  explicitly.**
 
 Instruct it to follow `REVIEW.md` to the letter against the current working
 tree (`git diff HEAD`), and to end with the prose report that file describes.

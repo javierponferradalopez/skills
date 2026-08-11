@@ -87,7 +87,8 @@ hide a red tree.
 
 ## 8. Report — return it as your final message, in prose
 
-Your final message **is** the report the human will read. Cover: **what you
+Your final message **is** the report the human will read, relayed verbatim —
+write it in the language you were given. Cover: **what you
 changed and why** (fixes, hardening, refactors); **what you flagged but did NOT
 touch** (spec-coverage gaps, scope creep, judgment calls left to the human);
 **tests you added** and what they protect against; and the **typecheck/test
