@@ -1,6 +1,6 @@
 ---
 name: code-standards
-description: A language-agnostic quality bar for generating and validating good code, focused on what models get wrong by default — deep modules, designing errors out of existence, behavior-driven tests that mock only at boundaries, and restraint against speculative abstraction. Use when writing, reviewing, refactoring, or judging code in any language, or when the user references coding standards, clean code, deep modules, or asks whether code is clean, maintainable, or well designed.
+description: Read BEFORE the first edit of any change that writes or modifies code — single-line edits included — before reviewing, refactoring, or judging code already written, and on any mention of coding standards, clean code, or whether code is well designed. The universal, language-agnostic quality bar for what models get wrong by default: deep modules, errors designed out of existence, behavior-driven tests that mock only at boundaries, restraint against speculative abstraction.
 ---
 
 # Code Standards
