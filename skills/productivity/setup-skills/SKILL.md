@@ -11,7 +11,6 @@ Scaffold the per-repo configuration that the engineering skills assume:
 - **Issue tracker** — where issues live (GitHub by default; GitLab, ClickUp, and local markdown are also supported out of the box)
 - **Domain docs** — where `CONTEXT.md` and ADRs live, and the consumer rules for reading them
 - **Error tracker** — which error-tracking tool this repo talks to, so skills like `diagnose` can pull production error signal over MCP. Optional — skip it for repos with no error tracking.
-- **Code standards** — a fixed rule telling agents to load the `code-standards` skill so all generated code meets the project's quality bar
 
 This is a prompt-driven skill, not a deterministic script. Explore, present what you found, confirm with the user, then write.
 
@@ -114,10 +113,6 @@ The block:
 ### Error tracker
 
 [one-line summary of the tool picked — e.g. "Sentry (errors)"]. [If root: `See docs/agents/error-tracker.md`.] [If per-subproject: `Configured per-subproject — each context declares its own tool in src/<context>/docs/agents/error-tracker.md`.]
-
-### Code standards
-
-Before writing or modifying code, load the `code-standards` skill and hold all generated code to it.
 ```
 
 Omit the `### Error tracker` sub-section entirely when no error tracker was picked — don't leave an empty heading.
