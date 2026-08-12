@@ -30,7 +30,7 @@ The command opens an **interactive selector** listing every skill in this repo. 
 
 ## Skill catalog
 
-Skills fall into two families: **engineer** — the disciplined inner loop from a vague task to committed code (align → plan → build → commit), plus the handoff skills that pause and resume that loop — and **productivity** — everything around that loop: diagnosis, domain modeling, architecture, code navigation, PR workflow, harness tooling, and learning.
+Skills fall into two families: **engineer** — the disciplined inner loop from a vague task to pushed code (align → plan → build → commit → push), plus the handoff skills that pause and resume that loop — and **productivity** — everything around that loop: diagnosis, domain modeling, architecture, code navigation, PR workflow, harness tooling, and learning.
 
 ### Engineer
 
@@ -47,6 +47,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 | [`code-review`](./skills/engineer/code-review/SKILL.md)     | Reviewing the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards and Spec — run as parallel sub-agents and reported side by side. Use to review a branch, a PR, or work-in-progress. |
 | [`code-standards`](./skills/engineer/code-standards/SKILL.md) | Writing or reviewing code in any language against a thin quality bar focused on what models get wrong by default — deep modules, errors designed out of existence, behavior-driven tests, restraint.   |
 | [`commit`](./skills/engineer/commit/SKILL.md)               | Splitting a dirty working tree into an ordered list of atomic conventional commits — plans from `git diff HEAD`, commits only on an explicit literal OK. |
+| [`done`](./skills/engineer/done/SKILL.md)                   | Pushing the branch and closing the issue it finishes — derives the right push command from the real git state, then a single `OK` authorises push and close together; no commit, branch, or PR. |
 | [`handoff`](./skills/engineer/handoff/SKILL.md)             | Compacting the current conversation into a handoff document (saved to the OS temp dir) so a fresh agent can continue the work — references existing artifacts rather than duplicating them. |
 | [`handoff-grill`](./skills/engineer/handoff-grill/SKILL.md) | Pausing a `grill-me` session into a resumable handoff that preserves the open branches of the decision tree, not just the closed decisions — to continue later or hand to a teammate. |
 | [`domain-modeling`](./skills/engineer/domain-modeling/SKILL.md) | Actively building and sharpening the project's domain model — challenging terms and writing the glossary (`CONTEXT.md`) and decisions (ADRs) down the moment they crystallise. |
