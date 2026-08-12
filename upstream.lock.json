@@ -96,6 +96,13 @@
       "source": "skills/productivity/writing-for-agents",
       "base": "84fdeff",
       "mode": "pure"
+    },
+    "matt:research": {
+      "upstream": "matt",
+      "mine": "skills/productivity/research",
+      "source": "skills/engineering/research",
+      "base": "84fdeff",
+      "mode": "pure"
     }
   }
 }
