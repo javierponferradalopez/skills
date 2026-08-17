@@ -1,8 +1,8 @@
 # Comments on a Pull Request
 
-The Pull Request branch of [`implement-review-comments`](SKILL.md): where the comments come from, and what closing one means. The rest of the flow — sorting, the OK, the grilling — is the same.
+The Pull Request branch of [`grill-me-comments`](SKILL.md): where the comments come from, and — once the user asks for it — how a thread gets answered. The rest of the flow, sorting through the OK to the grilling, is the same.
 
-This feedback comes from other people, and closing it writes back to GitHub under the user's name. Two things follow: the tree you edit has to be the one that was reviewed, and every reply is shown to the user before it is posted.
+This feedback comes from other people, so the tree the batch is agreed against has to be the one that was reviewed.
 
 ## Check the ground
 
@@ -28,11 +28,13 @@ It returns the unresolved threads and the review bodies, keeping every author �
 
 Each thread is one comment for the batch, `path:line` as its ref; a review body covers the PR as a whole and has no anchor.
 
-Read each thread against the working tree **as it is today**, not against the diff that was reviewed. A thread flagged `outdated` whose code is already gone is settled on the spot: reply with where it went, and resolve it.
+Read each thread against the working tree **as it is today**, not against the diff that was reviewed. A thread flagged `outdated` whose code is already gone settles as _no longer applies_ and goes on the agreed batch like any other, with where the code went as its line — the PR is written to once, when the user says so, or not at all.
 
-A GitHub `suggested change` is clear by construction — the reviewer wrote the only implementation there is — and goes on the approved list like any other: the reviewer settled the how, not the whether.
+A GitHub `suggested change` is AFK by construction — the reviewer wrote the only implementation there is — and goes on the AFK list like any other: the reviewer settled the how, not the whether.
 
-## Reply
+## Answering the threads
+
+Reference for the moment the user asks for the threads to be answered — after the changes are in, never during the batch. An answered thread is a claim about code that exists.
 
 Draft one reply per thread and **show the user every reply before posting it**: another person reads them, with the user's name on top.
 
