@@ -1,6 +1,6 @@
 ---
 name: grill-me-comments
-description: Work through review comments — the ones in the code, a Pull Request's threads, or feedback you paste — settling the obvious ones on a single OK, grilling the rest one at a time, and handing back the agreed batch for the user to say what becomes of it.
+description: Work through review comments — the user's own, a Pull Request's threads, or feedback they paste — settling the obvious ones on a single OK, grilling the rest one at a time, and handing back the agreed batch for the user to say what becomes of it.
 disable-model-invocation: true
 ---
 
@@ -12,11 +12,13 @@ The whole run is agreement, not work: nothing is written until the user has said
 
 ## 1. Find them
 
-Start from the source the user's message already names. Invoked with nothing, ask — closed, so one word answers it: **in the code, on a Pull Request, or pasted here?**
+Start from the source the user's message already names. Invoked with nothing, ask — closed, so one word answers it: **yours, on a Pull Request, or pasted here?**
 
-- **In the code** — the comments they left for you there, in the format their `CLAUDE.md` defines. Read each one whole: a comment can run past its first line.
+- **Yours** — comments they left for you outside this conversation. Where those live and what closing one means is theirs to define: their instructions for you say it, and when nothing does, ask. Either way that is the current word, over anything here.
 - **On a Pull Request** — [`PR.md`](PR.md) has the ground check, the collection script and the reply mechanics.
 - **Pasted here** — take them as given.
+
+Read the source again before the batch of step 5 and before anything is written in step 6. The run takes turns, and the user keeps working through them: what you collected here is a copy, and a copy goes stale.
 
 ## 2. Sort — the uniqueness test
 
@@ -25,7 +27,7 @@ For each comment ask: **is there more than one reasonable way to satisfy this?**
 - No → **AFK**. It resolves with the agent alone.
 - Yes → **HITL** — human in the loop. It only resolves through a live exchange with the user, who speaks for themselves; an agent that answers for them has broken this.
 
-A comment is HITL when it reaches code outside its own file, changes a signature or any other public contract, names a new concept, or asks a question instead of giving an instruction. Borderline counts as HITL: a question costs one turn, a wrong guess costs the user's trust in the whole batch.
+A comment is HITL when it reaches code outside its own file, changes a signature or any other public contract, names a new concept, or asks a question instead of giving an instruction. So is one whose code you cannot pin down with certainty — an anchor that has drifted makes every reading of the comment a guess, whatever it asks. Borderline counts as HITL: a question costs one turn, a wrong guess costs the user's trust in the whole batch.
 
 ## 3. Post the map, then get an OK on the AFK ones
 
@@ -55,4 +57,4 @@ Then ask, proposing nothing: **what happens to this now?**
 
 ## 6. Wait
 
-Their answer is the whole of what happens next — implementing it here, writing it up, dropping it. Nothing moves before it arrives.
+Their answer is the whole of what happens next — implementing it here, writing it up, dropping it. Nothing moves before it arrives, and whatever it turns out to be, closing every comment it satisfies is part of doing it: a change that lands and leaves its comment standing reads as work still owed.
