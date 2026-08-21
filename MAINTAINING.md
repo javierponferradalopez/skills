@@ -25,7 +25,7 @@ Skills are quickly becoming one of the highest-leverage ways to shape how Claude
 
 This repo is built around a different stance: **borrow the best, but own what you run.**
 
-- **Adopt from anyone.** Skills here are adopted from other creators — today [Matt Pocock](https://github.com/mattpocock/skills), more in the future — and the [`skills-upstream`](#the-tool-binskills-upstream) tool makes adding a new one a single command.
+- **Adopt from anyone.** Skills here are adopted from other creators — today [Matt Pocock](https://github.com/mattpocock/skills) and [Noel Lopez](https://github.com/noel-lopez/skills), more in the future — and the [`skills-upstream`](#the-tool-binskills-upstream) tool makes adding a new one a single command.
 - **Adapt to your needs.** Every adopted skill is _my_ copy. I translate it, retune it, split it, or extend it freely — it's just files in this repo.
 - **Stay in sync without losing control.** Provenance is tracked per skill, so the tool can pull only what the original author changed and **3-way-merge** it into my version — surfacing real conflicts instead of overwriting my work. I decide, per skill, what to take and what to keep.
 - **Never depend 100% on something external.** If an upstream skill is renamed, deleted, or goes in a direction I don't like, my copy keeps working. Upstream is a source of ideas, not a dependency I'm chained to.
@@ -136,7 +136,7 @@ find ~/.claude -maxdepth 2 -type l -lname "*/skills/*" -delete
 
 ## Syncing with upstreams
 
-Many skills here are **forked from other creators** — today [Matt Pocock's skills](https://github.com/mattpocock/skills), more in the future — but this is not a git fork: the repos share no common history, and each upstream renames and moves skills freely. So a plain `git merge` is not an option. Instead, every origin is registered once in an **upstreams catalog**, provenance is tracked **per fork** in [`upstream.lock.json`](./upstream.lock.json), and a small tool brings over only the changes you want — without clobbering your local edits.
+Many skills here are **forked from other creators** — today [Matt Pocock's](https://github.com/mattpocock/skills) and [Noel Lopez's](https://github.com/noel-lopez/skills), more in the future — but this is not a git fork: the repos share no common history, and each upstream renames and moves skills freely. So a plain `git merge` is not an option. Instead, every origin is registered once in an **upstreams catalog**, provenance is tracked **per fork** in [`upstream.lock.json`](./upstream.lock.json), and a small tool brings over only the changes you want — without clobbering your local edits.
 
 Each origin is an **upstream** with a short **key** (e.g. `matt`). Every fork records which key it came from and is addressed by a namespaced **manifest key** `<upstream>:<name>` (e.g. `matt:teach`) — so two creators can ship a skill of the same name without colliding. That manifest key is tool-facing only; the name you *invoke* a skill with still comes from its `SKILL.md` frontmatter.
 

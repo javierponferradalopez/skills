@@ -3,6 +3,9 @@
   "upstreams": {
     "matt": {
       "url": "https://github.com/mattpocock/skills.git"
+    },
+    "noel": {
+      "url": "https://github.com/noel-lopez/skills.git"
     }
   },
   "skills": {
@@ -102,6 +105,13 @@
       "mine": "skills/productivity/research",
       "source": "skills/engineering/research",
       "base": "84fdeff",
+      "mode": "pure"
+    },
+    "noel:walkthrough": {
+      "upstream": "noel",
+      "mine": "skills/productivity/walkthrough",
+      "source": "skills/walkthrough",
+      "base": "7f0a15b",
       "mode": "pure"
     }
   }

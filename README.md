@@ -62,6 +62,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 | [`research`](./skills/productivity/research/SKILL.md)           | Investigating a question against high-trust primary sources and capturing the findings as a cited Markdown file — delegated to a background agent so work continues while it reads.        |
 | [`improve-codebase-architecture`](./skills/productivity/improve-codebase-architecture/SKILL.md) | Finding deepening opportunities in a codebase — turning shallow modules into deep ones for testability and AI-navigability, presented as a visual before/after HTML report informed by `CONTEXT.md` and ADRs. |
 | [`zoom-out`](./skills/productivity/zoom-out/SKILL.md)           | Stepping back for broader context or a higher-level perspective on an unfamiliar section of code.                                         |
+| [`walkthrough`](./skills/productivity/walkthrough/SKILL.md)     | Reading a set of changes yourself — a dirty tree, local commits or a PR turned into a throwaway HTML guide: impact first, then an ordered walk through the code with links that open each stop in your IDE. Orients you; leaves every quality call to you. |
 | [`github-pr`](./skills/productivity/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
 | [`suggest-reviewers`](./skills/productivity/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
 | [`setup-skills`](./skills/productivity/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md` plus `docs/agents/` so the engineering skills know its issue tracker, domain-doc layout, and error tracking. |
@@ -72,7 +73,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 
 ## Credits
 
-Many of these skills are based on [Matt Pocock's skills](https://github.com/mattpocock/skills), adapted to my own needs.
+Many of these skills are based on the work of other creators — [Matt Pocock](https://github.com/mattpocock/skills) and [Noel Lopez](https://github.com/noel-lopez/skills) — adapted to my own needs.
 
 > **Maintaining or forking this repo?** The machinery for keeping forked skills in sync with their upstreams, the local-development symlink tool, and the repository layout all live in [`MAINTAINING.md`](./MAINTAINING.md).
 
