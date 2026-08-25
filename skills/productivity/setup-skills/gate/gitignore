@@ -1,0 +1,7 @@
+# The gate versions its machinery and ignores its state.
+node_modules/
+.installed
+.previous.json
+.stryker-tmp/
+last-run/
+ensure.err

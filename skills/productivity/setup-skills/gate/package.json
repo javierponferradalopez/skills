@@ -1,0 +1,12 @@
+{
+  "name": "agents-gate",
+  "private": true,
+  "description": "Quality gate toolchain. Its own dependency tree — nothing here is installed into the project.",
+  "dependencies": {
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
+    "@typescript-eslint/parser": "8.67.0",
+    "eslint": "10.9.0",
+    "typescript": "6.0.3"
+  }
+}
