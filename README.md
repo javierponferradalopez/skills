@@ -16,7 +16,9 @@ A curated set of independent skills that turn vague tasks into shipped code with
 
 ---
 
-Every skill here is a **self-contained capability**, invoked by intent. Skills live entirely in the conversation: each one runs its single procedure and stops. No skill depends on a file another skill left behind, none writes to your repo unless you explicitly ask — so the projects you point them at stay clean. That independence is exactly why you can install **one skill or many**, and take only what you need.
+Every skill here is a **self-contained capability**, invoked by intent. Each one runs its single procedure and stops, and none writes to your repo unless you explicitly ask — so the projects you point them at stay clean. That's why you can install **one skill or many**, and take only what you need.
+
+Two of them meet through your repo rather than through each other: `setup-skills` materialises a **quality gate** in `.agents/gate/`, and `validate` runs it. Deliberate shared state, and it degrades honestly — a repo without that directory simply has no gate, and `validate` still does its half.
 
 ## Installation
 
@@ -43,7 +45,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 | [`wayfinder`](./skills/engineer/wayfinder/SKILL.md)         | Planning a chunk of work too big for one agent session — charting it as a shared map of investigation tickets on the issue tracker, then resolving them one at a time until the route to the destination is clear. |
 | [`tdd`](./skills/engineer/tdd/SKILL.md)                     | Building a feature or fixing a bug test-first — a disciplined red-green-refactor loop in vertical slices, with behavior-driven integration tests. |
 | [`implement`](./skills/engineer/implement/SKILL.md)         | Implementing a single issue end-to-end and stopping with the tree dirty — fetches the issue, loads project context, applies the code-standards bar and red-green-refactor; no commit, push, branch, or issue close. |
-| [`validate`](./skills/engineer/validate/SKILL.md)           | Reviewing one issue's uncommitted implementation pre-commit in a clean-room subagent (zero implementer bias) — fixes bugs/edge-cases/quality in place, writes tests to break the code, flags spec gaps and scope creep; leaves the tree green, never commits. |
+| [`validate`](./skills/engineer/validate/SKILL.md)           | Hardening one issue's uncommitted implementation pre-commit — flags spec gaps and scope creep, writes tests to break the code and fixes what breaks, then closes with the repo's quality gate (complexity + mutation survivors, zero tolerance) and works its findings until green. Never commits. |
 | [`code-review`](./skills/engineer/code-review/SKILL.md)     | Reviewing the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards and Spec — run as parallel sub-agents and reported side by side. Use to review a branch, a PR, or work-in-progress. |
 | [`grill-me-comments`](./skills/engineer/grill-me-comments/SKILL.md) | Working through review comments — the ones you left in the code, a PR's unresolved threads, or something you paste: sorts them by whether the implementation is obvious, settles that list on a single OK, grills you one at a time on the rest, then hands back the agreed batch and asks what becomes of it — nothing written, no comment deleted, no thread answered until you say. |
 | [`code-standards`](./skills/engineer/code-standards/SKILL.md) | Writing or reviewing code in any language against a thin quality bar focused on what models get wrong by default — deep modules, errors designed out of existence, behavior-driven tests, restraint.   |
@@ -65,7 +67,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 | [`walkthrough`](./skills/productivity/walkthrough/SKILL.md)     | Reading a set of changes yourself — a dirty tree, local commits or a PR turned into a throwaway HTML guide: impact first, then an ordered walk through the code with links that open each stop in your IDE. Orients you; leaves every quality call to you. |
 | [`github-pr`](./skills/productivity/github-pr/SKILL.md)         | Preparing and opening a PR for the current branch — Conventional-Commits title + why-focused description, approved before `gh pr create`. |
 | [`suggest-reviewers`](./skills/productivity/suggest-reviewers/SKILL.md) | Suggesting GitHub reviewers for the current branch's PR — ranked from git history + CODEOWNERS, kept out of context via an aggregating script. |
-| [`setup-skills`](./skills/productivity/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md` plus `docs/agents/` so the engineering skills know its issue tracker, domain-doc layout, and error tracking. |
+| [`setup-skills`](./skills/productivity/setup-skills/SKILL.md)   | Scaffolding a repo's `## Agent skills` block in `AGENTS.md`/`CLAUDE.md`, `docs/agents/`, and the quality gate in `.agents/gate/` — so the engineering skills know its issue tracker, domain-doc layout, error tracking, and machine-checked quality bar. |
 | [`writing-for-agents`](./skills/productivity/writing-for-agents/SKILL.md) | Writing any document an agent consumes — a skill, an `AGENTS.md`/`CLAUDE.md`, a doc reached by a pointer: context pointers, progressive disclosure, and the levers that keep a run predictable, plus `SKILL-MECHANICS.md` for skill frontmatter and invocation. |
 | [`teach`](./skills/productivity/teach/SKILL.md)                 | Learning a topic over multiple sessions — turns the current directory into a teaching workspace with a mission, citation-backed HTML lessons, reference cheat-sheets, and learning records. |
 
