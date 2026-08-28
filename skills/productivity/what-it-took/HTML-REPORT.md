@@ -68,6 +68,11 @@ the end of the window. Name the documents and their distance in plain terms —
 últimos cincuenta pasos se trabajaron con ella muy lejos". Include what was
 edited long after it was read, and anything that had to be brought back in.
 
+Then the instruction files that were paid for whole and used in part: for each
+one, the sections that never bore on the work and what they cost, summed. Name
+the document, the sections and the total, and say how many steps carried them.
+This is the figure that prices loading the whole context up front.
+
 Close the block with the searched terms you judged to be real domain words,
 presented as what they are: **el vocabulario del repo que no está escrito en
 ninguna parte**, and the ready-made input for a `grill-me-with-docs` session. A

@@ -83,6 +83,24 @@ def flatten(content):
     return str(content)
 
 
+HEADING = re.compile(r"#{1,6}\s+\S")
+
+
+def outline(text):
+    """A document's headings with the size of each section — its branches, priced."""
+    lines = (text or "").splitlines()
+    marks = [i for i, l in enumerate(lines) if HEADING.match(l.strip())]
+    if not marks:
+        return []
+    sections = []
+    if marks[0] > 0:
+        sections.append(("(before the first heading)", tokens_of("\n".join(lines[:marks[0]]))))
+    for n, i in enumerate(marks):
+        end = marks[n + 1] if n + 1 < len(marks) else len(lines)
+        sections.append((" ".join(lines[i].split())[:90], tokens_of("\n".join(lines[i:end]))))
+    return sections
+
+
 def clip(text, n=EXCERPT):
     text = " ".join((text or "").split())
     if len(text) <= n:
@@ -241,7 +259,9 @@ def main():
     pre_prompt = 0        # the opening prompt — likewise inside `toll`
     sidechain_calls = 0
     first_prompt = None
-    attachments = defaultdict(lambda: {"n": 0, "tokens": 0, "detail": Counter(), "lines": []})
+    attachments = defaultdict(lambda: {"n": 0, "tokens": 0, "detail": Counter(),
+                                       "lines": [], "files": Counter(), "outlines": {},
+                                       "first_turn": None})
     cwd = None
     warnings = []
 
@@ -339,11 +359,14 @@ def main():
                 rec["n"] += 1
                 rec["tokens"] += tok
                 rec["lines"].append(lineno)
+                if rec["first_turn"] is None:
+                    rec["first_turn"] = len(turns)
                 for key in ("addedNames", "names", "addedTypes", "pendingMcpServers"):
                     for v in (a.get(key) or []):
                         rec["detail"][str(v)] += 1
                 if a.get("path"):
-                    rec["detail"][str(a["path"])] += 1
+                    rec["files"][str(a["path"])] += tok
+                    rec["outlines"][str(a["path"])] = outline(flatten(a))
 
     if not turns:
         die(f"{path} holds no assistant turns with usage — nothing to measure")
@@ -587,14 +610,23 @@ def main():
         out("none")
     out("")
 
-    out("## the always-on block, itemised")
-    out("What the harness injects whether or not it gets used. Sizes are estimates;")
+    out("## the injected block, itemised")
+    out("What the harness loads whether or not it gets used. Sizes are estimates;")
     out("the names are exact, and a type listed twice was loaded twice.")
+    out("A block arriving at turn 1 sits inside `toll`; one arriving later is paid by every")
+    out("turn after it, and shows up above as growth no payload accounts for.")
     for kind, rec in sorted(attachments.items(), key=lambda kv: kv[1]["tokens"], reverse=True):
         repeated = " LOADED TWICE" if kind in ("skill_listing", "deferred_tools_delta",
                                                "mcp_instructions_delta", "agent_listing_delta") \
                    and rec["n"] > 1 else ""
-        out(f"{rec['tokens']:>8,}  {kind:<24} x{rec['n']:<4} lines {rec['lines'][:4]}{repeated}")
+        ft = rec["first_turn"] or 0
+        when = ("at turn 1, inside toll" if ft == 0 else
+                f"from turn {ft} on — paid by the {len(turns) - ft} turns after it")
+        out(f"{rec['tokens']:>8,}  {kind:<24} x{rec['n']:<4} {when}  lines {rec['lines'][:4]}{repeated}")
+        for fp, tok in rec["files"].most_common(15):
+            out(f"          {tok:>7,}  {fp.replace(cwd + '/', '') if cwd else fp}")
+        if len(rec["files"]) > 15:
+            out(f"          ...and {len(rec['files']) - 15} more files")
         if rec["detail"]:
             names = ", ".join(n for n, _ in rec["detail"].most_common(10))
             out(f"          {names[:200]}")
@@ -603,6 +635,20 @@ def main():
     if not attachments:
         out("none recorded in this transcript")
     out("")
+
+    priced = [(fp, rec["files"][fp], o) for rec in attachments.values()
+              for fp, o in rec["outlines"].items() if o]
+    if priced:
+        out("## what the auto-loaded instructions contain")
+        out("Each instruction file broken into its sections, largest first. The document was")
+        out("paid for whole; judge section by section which of it this session actually needed.")
+        for fp, size, sections in sorted(priced, key=lambda t: t[1], reverse=True):
+            out(f"{size:>8,}  {fp.replace(cwd + '/', '') if cwd else fp}")
+            for head, tok in sorted(sections, key=lambda t: t[1], reverse=True)[:12]:
+                out(f"          {tok:>7,}  {head}")
+            if len(sections) > 12:
+                out(f"          ...and {len(sections) - 12} more sections")
+        out("")
 
     out("## how far the opening instructions got diluted")
     at_work = turns[first_work["turn"] - 1]["window"] if first_work else toll

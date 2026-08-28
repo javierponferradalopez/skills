@@ -36,8 +36,9 @@ different. Read it before you read any detail:
 - **Toll heavy** — the first-turn figure is a large slice of what is resident,
   or `growth no payload accounts for` shows thousands arriving on turns that
   received nothing. Something is loading whether or not it gets used: skill
-  descriptions, tool schemas, an always-loaded `CLAUDE.md`, a skill body pulled
-  in mid-session. This one is multiplied by every turn that follows it.
+  descriptions, tool schemas, an always-loaded `CLAUDE.md`, the instruction
+  bundle a directory pulls in whole, a skill body. This one is multiplied by
+  every turn that follows it.
 - **Locate heavy** — the session paid to find *where things live*. The repo's
   vocabulary and its layout disagree.
 - **Comprehend heavy** — the session paid to find out *what things do*. The code
@@ -51,25 +52,45 @@ different. Read it before you read any detail:
 The **first work** milestone is the headline: how much was already resident
 before anything was produced. That figure is what the human came for.
 
-## 3. Break down what loads before anything happens
+## 3. Break down what loads on its own
 
 The first-turn figure arrives as one number, and one number is unactionable —
-nobody can decide anything about "36.773". The aggregator's `always-on block`
+nobody can decide anything about "36.773". The aggregator's `injected block`
 section takes it apart for you: skill listings, deferred tool schemas, MCP
-server instructions, agent listings, auto-loaded `CLAUDE.md` files
-(`nested_memory`, with their paths), and the reminders that re-enter every turn.
-Sizes are estimates; the names are exact.
+server instructions, agent listings, auto-loaded instruction files
+(`nested_memory`, one line per file with its own size), and the reminders that
+re-enter every turn. Sizes are estimates; the names are exact.
 
-Two things to act on there:
+Every row says when it arrived, and the two cases prescribe differently. What
+lands **at turn 1** sits inside `toll` and is paid by the whole session. What
+lands **mid-session** is paid only by the turns after it — it is also what the
+growth-no-payload section is showing you, and it is the easier of the two to
+move.
 
+Three things to act on there:
+
+- **An instruction bundle pulled in whole.** A `CLAUDE.md` that `@`-imports its
+  architecture, testing and styling documents loads every one of them the moment
+  the agent touches that directory, in a single jump, whether or not the session
+  needed any of them. The per-file sizes name the heavy ones, so the
+  prescription can be about one document rather than about the bundle.
 - **Anything marked `LOADED TWICE`.** The harness reloads the whole block when a
   skill is invoked a second time, so `/skill` followed by `/skill <arg>` pays for
   the listings twice. That is pure waste and the human can stop it today.
 - **Names nobody in this repo uses.** The tool and MCP listings carry every
   connected server, authenticated or not. Name them, count them, price them.
 
-This breakdown is mandatory and sits outside the three-stretch budget: it is the
-one part of the window that is paid on every single turn.
+This breakdown is mandatory and sits outside the three-stretch budget: no other
+part of the window is paid this many times over.
+
+**Then price what went unused.** The `what the auto-loaded instructions contain`
+section breaks each of those files into its sections, largest first. Go through
+them against what the session actually did and name the ones that never bore on
+it: a document loaded whole for one of its eight sections is seven sections paid
+for on every turn that followed. Give the figure — the unused sections summed —
+and say which branch would have reached the needed one on its own. This is the
+sharpest number this skill can put on an instruction file: it prices loading
+everything up front against what the session turned out to need.
 
 **Then check whether the answer was already in the window.** The `nested_memory`
 entries are the instruction files the session actually had loaded. When a costly
@@ -161,6 +182,8 @@ Done once, they pay in every future session.
 | Locate heavy across directories whose names do not match the domain | Rename toward the ubiquitous language, or add the index that maps one to the other | `improve-codebase-architecture` |
 | Repeated reading to recover a decision's reasoning | An ADR holding the why | `grill-me-with-docs` |
 | Toll heavy from an always-loaded document | Prune it, and push what only some runs need behind a pointer | `writing-for-agents` |
+| An instruction bundle that loads whole the moment a directory is touched | Replace the `@`-imports with pointers, so each document is reached only by the runs that need it | `writing-for-agents` |
+| An instruction file paid for whole for a fraction of its sections | Split it by branch and leave a pointer to each part, so a run loads the section it needs | `writing-for-agents` |
 | Toll heavy from skill descriptions or tool schemas | Turn the skills you only ever type into user-invoked ones; retire MCP servers this repo does not use | `writing-for-agents` |
 | No `CONTEXT.md`, no `docs/agents/` — the scaffold itself is missing | Scaffold it, then fill it | `setup-skills`, then `grill-me-with-docs` |
 
@@ -189,7 +212,8 @@ Read [`HTML-REPORT.md`](HTML-REPORT.md) for the deliverable and build it there.
 
 Return **one line** to the caller: the headline figure and the report's path.
 
-Your analysis is complete when the always-loaded block is broken into named
-pieces, every zoomed stretch has its cheaper-way answer, every buried document is
-named with its distance, every prescription carries its figure, and the report
-declares what you did not read.
+Your analysis is complete when the injected block is broken into named pieces,
+every auto-loaded instruction file has its unused sections priced, every zoomed
+stretch has its cheaper-way answer, every buried document is named with its
+distance, every prescription carries its figure, and the report declares what
+you did not read.
