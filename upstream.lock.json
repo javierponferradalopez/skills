@@ -113,6 +113,13 @@
       "source": "skills/walkthrough",
       "base": "7f0a15b",
       "mode": "pure"
+    },
+    "matt:ask-matt": {
+      "upstream": "matt",
+      "mine": "skills/productivity/which-skill",
+      "source": "skills/engineering/ask-matt",
+      "base": "6654f6b",
+      "mode": "modified"
     }
   }
 }

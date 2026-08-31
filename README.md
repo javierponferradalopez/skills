@@ -32,6 +32,8 @@ The command opens an **interactive selector** listing every skill in this repo. 
 
 Skills fall into two families: **engineer** — the disciplined inner loop from a vague task to pushed code (align → plan → build → commit → push), plus the handoff skills that pause and resume that loop — and **productivity** — everything around that loop: diagnosis, domain modeling, architecture, code navigation, PR workflow, harness tooling, and learning.
 
+Can't remember which one fits what you're doing? [`which-skill`](./skills/productivity/which-skill/SKILL.md) is the router over all of them: the main flow from idea to shipped code, the on-ramps that merge onto it, and everything standalone.
+
 ### Engineer
 
 | Skill                                              | Use when                                                                                                                                  |
@@ -57,6 +59,7 @@ Skills fall into two families: **engineer** — the disciplined inner loop from 
 
 | Skill                                              | Use when                                                                                                                                  |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| [`which-skill`](./skills/productivity/which-skill/SKILL.md)     | Not remembering which skill or flow fits the situation — a router over the whole catalog: the main flow from idea to shipped code, the on-ramps that merge onto it, the vocabulary underneath, and the phase-boundary decision tree. |
 | [`catch-up`](./skills/productivity/catch-up/SKILL.md)           | Catching up on delegated work after time away (or as a lead) — recurses a ticket's subtasks, matches each to its PRs/branches by identifier via fan-out subagents, and reports what changed since an anchor date as a temp markdown briefing. |
 | [`diagnose`](./skills/productivity/diagnose/SKILL.md)           | Hard bugs, unclear regressions, perf problems: reproduce → minimise → hypothesise → instrument → fix → regression-test.                   |
 | [`what-it-took`](./skills/productivity/what-it-took/SKILL.md)   | Diagnosing how much context window a session needed to do what it did — a subagent measures the resident footprint from the session transcript, breaks down what loads on every turn, finds the evidence that got buried far from the end of the window, and prescribes what would have made it cheaper, as a throwaway HTML report. |
