@@ -21,11 +21,20 @@ and comments**, and pull in its parent PRD if it has one.
 
 ## 2. Load context
 
-Before writing code, read the project's own bar and shape:
+Before writing code, read the project's own bar and shape: `CONTEXT.md`,
+`docs/`, `CLAUDE.md` / `AGENTS.md`.
 
-- `CONTEXT.md`, `docs/`, `CLAUDE.md` / `AGENTS.md`.
-- Explore the repo and fill context with the parts relevant to this issue —
-  **especially the test files** that touch the area you'll change.
+When the issue carries **Bearings**, read there first — they are an estimate of
+where the work lands, so they spare you the search, not the reading.
+
+Orient in the repo **surgically**: grep for the seam, read the ranges the grep
+points at, and open a whole file when you'll edit it. Nothing you read leaves
+this window, so read what you'll use.
+
+The tests already covering the area are material you'll use: they carry the
+conventions the tests you're about to write have to match.
+
+Done when nothing about the repo is left to find out and you can start editing.
 
 ## 3. Apply the quality bar
 

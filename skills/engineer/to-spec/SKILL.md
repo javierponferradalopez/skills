@@ -51,7 +51,7 @@ A list of implementation decisions that were made. This can include:
 - API contracts
 - Specific interactions
 
-Do NOT include specific file paths or code snippets. They may end up being outdated very quickly.
+Decisions live at the module and interface level. Code stays in the codebase, its own source of truth — a copy here goes stale in silence. Which areas the work lands in goes in **Bearings**, as an estimate to walk into.
 
 Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it within the relevant decision and note briefly that it came from a prototype. Trim to the decision-rich parts — not a working demo, just the important bits.
 
@@ -62,6 +62,16 @@ A list of testing decisions that were made. Include:
 - A description of what makes a good test (only test external behavior, not implementation details)
 - Which modules will be tested
 - Prior art for the tests (i.e. similar types of tests in the codebase)
+
+## Bearings
+
+Where to look to get oriented — an estimate made while planning, not a
+commitment. Point at the areas whose existing code and tests the implementer
+needs in context, so getting there costs no search; which files change stays
+their call, which is what keeps the prefactor free.
+
+- `<area>` — <what the implementer finds there>
+- `<where its tests live>` — the prior art the new tests mirror
 
 ## Out of Scope
 

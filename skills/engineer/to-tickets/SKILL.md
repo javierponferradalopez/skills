@@ -17,7 +17,7 @@ Work from whatever is already in the conversation context. If the user passes a 
 
 ### 2. Explore the codebase (optional)
 
-If you have not already explored the codebase, do so to understand the current state of the code. Ticket titles and descriptions should use the project's domain glossary vocabulary, and respect ADRs in the area you're touching.
+If you have not already explored the codebase, do so to understand the current state of the code. A parent spec's **Bearings** stand in for the part of that exploration that locates the work — take them rather than getting oriented twice. Ticket titles and descriptions should use the project's domain glossary vocabulary, and respect ADRs in the area you're touching.
 
 Look for opportunities to prefactor the code to make the implementation easier. "Make the change easy, then make the easy change."
 
@@ -76,6 +76,9 @@ Do NOT close or modify any parent issue.
 - [ ] Acceptance criterion 1
 - [ ] Acceptance criterion 2
 
+**Bearings:** the areas the implementer should read to get oriented — the parent's,
+narrowed to this slice, or your own when there's no parent.
+
 </local-ticket-template>
 
 <issue-template>
@@ -97,6 +100,17 @@ The end-to-end behaviour this ticket makes work, from the user's perspective —
 
 - A reference to each blocking ticket, or "None — can start immediately".
 
+## Bearings
+
+Where to look to get oriented — an estimate, not a commitment. Take the
+parent's when it has them, narrowed to this slice; derive your own only when
+there's no parent. Point at the areas whose existing code and tests the implementer
+needs in context, so getting there costs no search; which files change stays
+their call, which is what keeps the prefactor free.
+
+- `<area>` — <what the implementer finds there>
+- `<where its tests live>` — the prior art the new tests mirror
+
 </issue-template>
 
-In either form, avoid specific file paths or code snippets — they go stale fast. Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts — not a working demo, just the important bits.
+In either form, code stays in the codebase, its own source of truth — a copy in a ticket goes stale in silence. Give each ticket its **Bearings** instead: the areas to read to get oriented. Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts — not a working demo, just the important bits.
