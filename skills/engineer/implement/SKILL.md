@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Implement a single issue end-to-end and stop with the working tree dirty — no commit, no push, no branch, no issue close. Reads the repo's issue tracker convention to fetch the issue, loads project context, applies the code-standards bar, and embodies red-green-refactor where feasible.
+description: Build one issue end-to-end and hold it to the standards bar — stops with the tree dirty, no commit, push, branch, or issue close.
 argument-hint: "#N (passes an issue URL/path)"
 disable-model-invocation: true
 ---
@@ -36,33 +36,21 @@ conventions the tests you're about to write have to match.
 
 Done when nothing about the repo is left to find out and you can start editing.
 
-## 3. Apply the quality bar
+## 3. Implement (TDD where feasible)
 
-Invoke **`/code-standards`** for the bar on deep modules, testing, and clean
-code. Don't restate standards here — that skill owns them.
+Use `/tdd` where possible, at pre-agreed seams.
 
-## 4. Implement (TDD where feasible)
+Done when every acceptance criterion is built, and each one that went through a
+seam went **red** before it went green.
 
-Derive the behaviors to build from the issue's **acceptance criteria**, then
-apply red-green where feasible: red → green, one vertical slice per cycle,
-cleaning up against the code-standards bar once green.
-
-The `tdd` skill holds the loop's discipline — read it for reference, but
-**don't invoke `/tdd`**: it runs an interactive seam-confirmation gate that
-doesn't belong in this autonomous flow. Pick the seams yourself from the
-acceptance criteria.
-
-Where TDD doesn't fit, just build it well; a later review pass is the safety
-net that adds tests.
-
-## 5. Autonomy & escalation
+## 4. Autonomy & escalation
 
 Work autonomously — no plan-approval gate. Escalate to the user (**in prose, no
 interactive prompts**) **only** for a blocking ambiguity that neither the issue,
 its PRD, `CONTEXT.md`, nor the ADRs resolve. Don't guess blindly; don't ask
 about everything either.
 
-## 6. Feedback loop
+## 5. Feedback loop
 
 Before stopping, run the repo's **real** typecheck and test commands and get them
 green. Get them from where the repo documents them — `CLAUDE.md` / `AGENTS.md`,
@@ -70,11 +58,44 @@ project memory, a `docs/` runbook. Only if they aren't written down anywhere, fa
 back to discovering them (`package.json` scripts, `Makefile`, README); don't assume
 `npm`, and don't spelunk in a loop.
 
-## 7. Stop — leave it dirty
+## 6. Hold the bar
+
+The code works; now make it hold. **The diff is the only evidence** — you wrote these
+lines, so you carry every assumption that went into them, and the assumptions are what
+a bar exists to catch. Judging from memory judges your intent, not the code. So the
+judging goes to a **read-only sub-agent** that has seen nothing but the diff.
+
+Give it:
+
+- The diff: `git diff HEAD`, plus `git status` for the untracked files the diff misses.
+- The repo's own standards sources — anything documenting how code should be written
+  here, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
+- The **absolute path to `STANDARDS.md`**, resolved from this skill's own directory.
+  The sub-agent reads it itself — this window never loads it.
+- The brief: "Read the standards file at the path given, then report — per file/hunk
+  where relevant — every place the diff violates (a) a documented repo standard: cite
+  the file + the rule; or (b) a rule from that file: name it and quote the hunk. A
+  documented repo standard overrides it. Skip anything tooling enforces. Report only
+  what genuinely bears on correctness, maintainability, or design, and say what the
+  diff does well. Under 400 words."
+
+**Then fix what it found, here.** Reduce nesting, eliminate redundancy, sharpen names,
+consolidate logic. **Preserve behavior** — change only *how* the code works, never
+*what* it does. Re-run typecheck and tests and get back to green.
+
+A report that finds nothing worth changing is a valid outcome. Only touch what
+genuinely needs it.
+
+## 7. Prune the comments
+
+Invoke **`/prune-comments`** on the change. Done when every comment in the diff has
+faced its verdict.
+
+## 8. Stop — leave it dirty
 
 When the issue is done:
 
 - **Do NOT** commit, push, create a branch, or close the issue. Work on the
   current branch; branches are the user's concern.
-- End with a short summary: what you built, key decisions, and the
-  typecheck/test status.
+- End with a short summary: what you built, key decisions, what the standards pass
+  changed, and the typecheck / test status.
