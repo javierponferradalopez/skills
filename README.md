@@ -38,7 +38,7 @@ Can't remember which one fits what you're doing? [`which-skill`](./skills/produc
 
 | Skill                                              | Use when                                                                                                                                  |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| [`grill-me`](./skills/engineer/grill-me/SKILL.md)           | Interrogating an idea until every ambiguity is resolved — walking down each branch of the design tree, one question at a time.            |
+| [`grill-me`](./skills/engineer/grill-me/SKILL.md)           | Interrogating an idea until every ambiguity is resolved — working the design tree in rounds, asking every question whose prerequisites are already settled, until no branch is left unvisited.            |
 | [`grill-with-docs`](./skills/engineer/grill-me-with-docs/SKILL.md) | Running a `grill-me` session that also drives `domain-modeling` — so the interrogation simultaneously sharpens terminology and writes the glossary/ADRs down as decisions crystallise. |
 | [`to-spec`](./skills/engineer/to-spec/SKILL.md)             | Turning the current conversation into a spec and publishing it to the project issue tracker — synthesises what's known, no interview.      |
 | [`to-tickets`](./skills/engineer/to-tickets/SKILL.md)       | Breaking a plan, spec, or PRD into independently-grabbable tickets on the tracker using tracer-bullet vertical slices.                     |
