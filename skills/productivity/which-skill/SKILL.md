@@ -21,12 +21,12 @@ The route most work travels. You have an idea and want it built.
    - **No** → step 3, right here in the same context window.
 
 3. **Build and ship it.** Four deliberate steps, each stopping exactly where the next begins:
-   - **`/implement`** builds one issue: fetches it, loads the project's context, holds the **`/code-standards`** bar and drives **`/tdd`** internally one red-green slice at a time. It **stops with the tree dirty** — no commit, no push, no branch, no issue closed.
-   - **`/validate`** then reviews that uncommitted diff with **fresh eyes**: the diff is the only evidence, never how the ticket was built, so none of the implementer's bias survives. It fixes bugs, edge cases and quality in place and writes tests to break the code, then flags spec-coverage gaps and scope creep for you instead of silently filling them. It leaves the tree green and never commits.
+   - **`/implement`** builds one issue: fetches it, loads the project's context and drives **`/tdd`** one red-green slice at a time. Then it holds what it built to the **standards bar**, judged by a sub-agent that has seen nothing but the diff, and prunes the comments. It **stops with the tree dirty** — no commit, no push, no branch, no issue closed.
+   - **`/harden`** then asks the two questions `/implement` can't ask about itself: does it **survive attack**, and is it **what you asked for**? It writes tests for the holes and kills surviving mutants, while a **Spec sub-agent** flags coverage gaps and scope creep for you instead of silently filling them. It leaves the tree green and never commits.
    - **`/commit`** splits the dirty tree into an ordered list of atomic conventional commits, and commits only on an explicit literal OK.
    - **`/done`** pushes the branch and closes the issue it finishes. When the work ships through review instead, that's **`/github-pr`**, which closes out by running **`/suggest-reviewers`**.
 
-   Three of these are worth reaching for on their own: **`/tdd`** when you just want a concrete behaviour built test-first with no ticket behind it, **`/code-review`** whenever you want the two-axis review (Standards + Spec) of a branch, a PR or work in progress against a fixed point, and **`/walkthrough`** when you'd rather read a set of changes yourself than have them judged for you.
+   Three of these are worth reaching for on their own: **`/tdd`** when you just want a concrete behaviour built test-first with no ticket behind it, **`/harden`** on its own whenever the change is a branch, a PR or anything already committed — pass it a fixed point instead of leaving it on the dirty tree — and **`/walkthrough`** when you'd rather read a set of changes yourself than have them judged for you.
 
 ### Context hygiene
 
@@ -50,14 +50,14 @@ A starting situation that generates work, then merges onto the main flow.
 
 Not feature work, just upkeep.
 
-- **`/improve-codebase-architecture`** runs whenever you have a spare moment to keep the codebase good for agents to operate in. It surveys for **deepening opportunities**, informed by `CONTEXT.md` and the ADRs, and reports them as a before/after HTML report; picking one _generates an idea_ you can take into the main flow at `/grill-with-docs`. It finds the candidates; **`/code-standards`** (below) is the vocabulary you design the chosen one in.
+- **`/improve-codebase-architecture`** runs whenever you have a spare moment to keep the codebase good for agents to operate in. It surveys for **deepening opportunities**, informed by `CONTEXT.md` and the ADRs, and reports them as a before/after HTML report; picking one _generates an idea_ you can take into the main flow at `/grill-with-docs`. It finds the candidates and carries its own vocabulary for designing the chosen one.
 
 ## Vocabulary underneath
 
-Two model-invoked references that run *beneath* the other skills, each the single source of truth for its vocabulary — so the skills above pull them in unasked. Reach for them directly when the **words**, not the process, are the problem.
+Two model-invoked references that run *beneath* the other skills, each the single source of truth for its vocabulary — so the skills above pull them in unasked. Reach for them directly when the **words**, not the process, are the problem. The bar for the code itself is no longer one of them: it lives as `STANDARDS.md` inside **`/implement`**, read by the sub-agent that judges against it and by nothing else.
 
 - **`/domain-modeling`**: sharpen the project's *domain* language: challenge a fuzzy term, resolve an overloaded word ("account" doing three jobs), record a hard-to-reverse decision as an ADR. It's the active discipline `/grill-with-docs` drives to keep `CONTEXT.md` a clean glossary.
-- **`/code-standards`** is the quality bar for the code itself, and the vocabulary for arguing about it: deep modules, errors designed out of existence, behaviour-driven tests that mock only at boundaries, restraint against speculative abstraction — language-agnostic, and aimed at what models get wrong by default. `/implement`, `/validate` and `/code-review` all speak it.
+- **`/tdd`**: the vocabulary for tests — what a good test is, where the seams go, the anti-patterns, and the mocking boundary. `/implement` drives it one slice at a time, and `/harden` writes against it when it adds a test to close a hole.
 
 ## Phase boundaries
 

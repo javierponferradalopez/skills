@@ -8,14 +8,14 @@ disable-model-invocation: true
 # Done
 
 Push what's committed and close the issue it finishes — the last deliberate step
-of `implement` → `validate` → `commit` → **`done`**.
+of `implement` → `harden` → `commit` → **`done`**.
 
 No Pull Request: when the work ships through review, that's `/github-pr`.
 
 ## 1. Resolve the issue
 
 `/done #N` names it. Without an argument, the issue is the one **this
-conversation** already worked (`/implement #N`, `/validate #N`), most recent
+conversation** already worked (`/implement #N`, `/harden #N`), most recent
 winning — the session is the only signal, so when it names none, ask and stop.
 
 Fetch it: the gate needs its **title**, the close comment its **language**.

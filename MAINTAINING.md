@@ -80,8 +80,8 @@ When run in a terminal, `bin/dev-link` opens an **interactive selector** so you 
   ◯ Select all
 
   engineer
-    ◯ code-standards
     ◉ commit
+    ◯ harden
     ...
   productivity
     ◉ diagnose
@@ -140,7 +140,7 @@ Many skills here are **forked from other creators** — today [Matt Pocock's](ht
 
 Each origin is an **upstream** with a short **key** (e.g. `matt`). Every fork records which key it came from and is addressed by a namespaced **manifest key** `<upstream>:<name>` (e.g. `matt:teach`) — so two creators can ship a skill of the same name without colliding. That manifest key is tool-facing only; the name you *invoke* a skill with still comes from its `SKILL.md` frontmatter.
 
-You only need this section if you want to keep your forked skills up to date. Skills you authored yourself (`implement`, `validate`, `grill-me`, `handoff-grill`, `github-pr`, `code-standards`, `commit`, `suggest-reviewers`, `zoom-out`, `catch-up`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
+You only need this section if you want to keep your forked skills up to date. Skills you authored yourself (`implement`, `harden`, `grill-me`, `handoff-grill`, `github-pr`, `commit`, `suggest-reviewers`, `zoom-out`, `catch-up`) are **not** tracked and are never touched. To see this split at any time, run `bin/skills-upstream doctor`.
 
 ### Quick reference — find your need
 

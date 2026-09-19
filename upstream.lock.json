@@ -86,13 +86,6 @@
       "base": "84fdeff",
       "mode": "pure"
     },
-    "matt:code-review": {
-      "upstream": "matt",
-      "mine": "skills/engineer/code-review",
-      "source": "skills/engineering/code-review",
-      "base": "84fdeff",
-      "mode": "modified"
-    },
     "matt:writing-for-agents": {
       "upstream": "matt",
       "mine": "skills/productivity/writing-for-agents",
@@ -119,6 +112,13 @@
       "mine": "skills/productivity/which-skill",
       "source": "skills/engineering/ask-matt",
       "base": "6654f6b",
+      "mode": "modified"
+    },
+    "noel:prune-comments": {
+      "upstream": "noel",
+      "mine": "skills/engineer/prune-comments",
+      "source": "skills/prune-comments",
+      "base": "34fdfc9",
       "mode": "modified"
     }
   }
