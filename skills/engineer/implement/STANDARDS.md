@@ -13,8 +13,10 @@ can I reduce the number of methods? Simplify the params? Hide more complexity in
   rules landing inside it. Then make the body cover what the name promises: if it promises
   more than it checks, either reduce the name or complete the body. A public name that
   over-promises is the defect; a broad public name backed by a body that honours it is not.
-- **Private** — name it for what it does. There is no contract to keep stable and the only
-  reader is reading this file, so the name is a sentence of the narrative it sits in.
+- **Private** — there is no contract to keep stable and the only reader is reading this
+  file, so the name serves its call site: it reads as one line of the narrative there.
+  Name what the result is, not what was done to get it, and let the signature declare
+  the types. A helper that returns nothing takes its action as its name.
 
 **Fail fast** — validate where the value is born, in the constructor. A separate
 `validate()` someone must remember to call is a rule that ships switched off.
