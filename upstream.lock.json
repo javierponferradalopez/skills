@@ -120,6 +120,13 @@
       "source": "skills/prune-comments",
       "base": "34fdfc9",
       "mode": "modified"
+    },
+    "noel:resolve-conflicts": {
+      "upstream": "noel",
+      "mine": "skills/productivity/resolve-conflicts",
+      "source": "skills/resolve-conflicts",
+      "base": "34fdfc9",
+      "mode": "pure"
     }
   }
 }
