@@ -56,7 +56,7 @@ Not feature work, just upkeep.
 
 Two model-invoked references that run *beneath* the other skills, each the single source of truth for its vocabulary — so the skills above pull them in unasked. Reach for them directly when the **words**, not the process, are the problem. The bar for the code itself is no longer one of them: it lives as `STANDARDS.md` inside **`/implement`**, read by the sub-agent that judges against it and by nothing else.
 
-- **`/domain-modeling`**: sharpen the project's *domain* language: challenge a fuzzy term, resolve an overloaded word ("account" doing three jobs), record a hard-to-reverse decision as an ADR. It's the active discipline `/grill-with-docs` drives to keep `CONTEXT.md` a clean glossary.
+- **`/domain-modeling`**: sharpen the project's *domain* language: challenge a fuzzy term, resolve an overloaded word ("account" doing three jobs), record a hard-to-reverse decision, or a rule on the shape of the code, as an ADR. It's the active discipline `/grill-with-docs` drives to keep `CONTEXT.md` a clean glossary.
 - **`/tdd`**: the vocabulary for tests — what a good test is, where the seams go, the anti-patterns, and the mocking boundary. `/implement` drives it one slice at a time, and `/harden` writes against it when it adds a test to close a hole.
 
 ## Phase boundaries

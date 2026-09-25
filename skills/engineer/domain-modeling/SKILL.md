@@ -72,3 +72,5 @@ Only offer to create an ADR when all three are true:
 3. **The result of a real trade-off** — there were genuine alternatives and you picked one for specific reasons
 
 If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
+
+A repo that keeps its conventions in ADRs also takes a **convention ADR** for each rule on the shape of the code, and the three conditions do not apply to it. See *Decisions and conventions* in [ADR-FORMAT.md](./ADR-FORMAT.md).
