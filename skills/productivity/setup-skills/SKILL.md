@@ -32,7 +32,7 @@ Look at the current repo to understand its starting state. Read whatever exists;
 
 Summarise what's present and what's missing. Then take the sections in order — one section, one answer, then the next.
 
-Lead each section with the recommended answer so the user can accept it in a word. Give a one-line explainer only when the choice genuinely branches; skip the section entirely when exploration already settled it (Section B when there's no monorepo).
+Lead each section with the recommended answer so the user can accept it in a word. Give a one-line explainer only when the choice genuinely branches; skip a question entirely when exploration already settled it (the layout question of Section B when there's no monorepo).
 
 **Section A — Issue tracker.**
 
@@ -54,6 +54,13 @@ Confirm the layout:
 
 - **Single-context** — one `CONTEXT.md` + `docs/adr/` at the repo root. Most repos are this.
 - **Multi-context** — `CONTEXT-MAP.md` at the root pointing to per-context `CONTEXT.md` files (typically a monorepo).
+
+Then ask whether the conventions of the code live in ADRs:
+
+> Explainer: A convention is a rule on the shape of the code (names, folders, factories, the shape of a test). With this on, each convention is an ADR of kind `convention` beside the decisions, a changed convention supersedes the old one whole, and the agent reads the accepted convention before it writes code.
+
+- **No** — each ADR is a decision. Most repos.
+- **Yes** — in a monorepo, also collect the packages: the name each one takes in an ADR file name (`backend`) and its path (`backend/`).
 
 **Section C — Error tracker.** Optional.
 
@@ -81,7 +88,7 @@ Connection is **MCP-only** — the user authenticates the MCP server themselves;
 Show the user a draft of:
 
 - The `## Agent skills` block to add to whichever of `CLAUDE.md` / `AGENTS.md` is being edited (see step 4 for selection rules)
-- The contents of `docs/agents/issue-tracker.md` and `docs/agents/domain.md`, plus each error-tracker doc (one at the root, or one per subproject) if a tool was picked
+- The contents of `docs/agents/issue-tracker.md` and `docs/agents/domain.md` (with the conventions fragment appended, if picked), plus each error-tracker doc (one at the root, or one per subproject) if a tool was picked
 
 Let them edit before writing.
 
@@ -110,12 +117,16 @@ The block:
 
 [one-line summary of layout — "single-context" or "multi-context"]. See `docs/agents/domain.md`.
 
+### Conventions
+
+Before you add or change code in `<package>/`, read the accepted `docs/adr/*-convention-<package>-<topic>.md` of each kind of class or file you touch. See `docs/agents/domain.md`.
+
 ### Error tracker
 
 [one-line summary of the tool picked — e.g. "Sentry (errors)"]. [If root: `See docs/agents/error-tracker.md`.] [If per-subproject: `Configured per-subproject — each context declares its own tool in src/<context>/docs/agents/error-tracker.md`.]
 ```
 
-Omit the `### Error tracker` sub-section entirely when no error tracker was picked — don't leave an empty heading.
+Omit the `### Error tracker` sub-section entirely when no error tracker was picked, and the `### Conventions` sub-section when conventions don't live in ADRs — don't leave an empty heading. In a single-package repo, the `### Conventions` line drops the package: "Before you add or change code, read the accepted `docs/adr/*-convention-<topic>.md` …".
 
 Then write the docs files using the seed templates in this skill folder as a starting point:
 
@@ -124,6 +135,7 @@ Then write the docs files using the seed templates in this skill folder as a sta
 - [issue-tracker-clickup.md](./issue-tracker-clickup.md) — ClickUp issue tracker
 - [issue-tracker-local.md](./issue-tracker-local.md) — local-markdown issue tracker
 - [domain.md](./domain.md) — domain doc consumer rules + layout
+- [domain-conventions.md](./domain-conventions.md) — appended to `docs/agents/domain.md` when conventions live in ADRs; fill the package list in a monorepo, or delete it and each `<package>-` segment
 - [error-tracker-sentry.md](./error-tracker-sentry.md) — Sentry error tracking
 
 For "other" issue trackers, write `docs/agents/issue-tracker.md` from scratch using the user's description.
