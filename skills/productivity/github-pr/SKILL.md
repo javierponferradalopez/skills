@@ -18,5 +18,5 @@ Prepare a Pull Request for the current branch: infer the business *why* from the
    - **Linked issue**: if `docs/agents/issue-tracker.md` exists, it defines the project's tracker and how a ticket is referenced and fetched. Look for a reference in the user's input, the commit messages, and the branch name; if found, fetch the ticket and infer **Problem** from its stated need. Otherwise infer **Problem** from the commits and diff.
 2. **Draft the title + description strictly against [`PR_FORMAT.md`](./PR_FORMAT.md)** — open it every run, don't draft from memory.
 3. **Present the preview**: *"Review the PR draft. Reply `approve` to proceed or `edit:` with changes."* Never create the PR without explicit approval.
-4. **On `approve`**: `gh pr create --assignee @me --title "<TITLE>" --body "<DESCRIPTION>"`, adding `--base <previous-branch>` only when stacked. Print the PR URL.
+4. **On `approve`**: `gh pr create --draft --assignee @me --title "<TITLE>" --body "<DESCRIPTION>"`, adding `--base <previous-branch>` only when stacked. Remove `--draft` only when the user asks for a PR that is ready for review. Print the PR URL.
 5. **On `edit:`**: apply the edits to the title/description only, re-show the preview, wait for `approve`.
