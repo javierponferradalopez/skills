@@ -17,7 +17,7 @@ depending on the repo's tracker. Implement **only** that issue.
 
 The issue tracker convention should already be in your context — run
 `/setup-skills` if not. Fetch the given issue **with its full body
-and comments**, and pull in its parent PRD if it has one.
+and comments**, and pull in the spec it was cut from if it has one.
 
 ## 2. Load context
 
@@ -47,7 +47,7 @@ seam went **red** before it went green.
 
 Work autonomously — no plan-approval gate. Escalate to the user (**in prose, no
 interactive prompts**) **only** for a blocking ambiguity that neither the issue,
-its PRD, `CONTEXT.md`, nor the ADRs resolve. Don't guess blindly; don't ask
+its spec, `CONTEXT.md`, nor the ADRs resolve. Don't guess blindly; don't ask
 about everything either.
 
 ## 5. Feedback loop
