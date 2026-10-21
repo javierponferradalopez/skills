@@ -51,8 +51,14 @@ The issue tracker convention should already be in your context — run
 4. Nothing found → ask where the spec is. If there is none, the spec check skips
    and the report says so.
 
-Fetch it **with its full body and comments**. A PRD with sub-issues reads as
-overall intent plus one sub-requirement per sub-issue.
+Fetch it **with its full body and comments**. A spec with tickets reads as
+overall intent plus one sub-requirement per ticket.
+
+When the issue is a ticket cut from a spec, also read that spec and list its
+other tickets with their state. Together they give each spec requirement an
+**owner**: this ticket owns its acceptance criteria, and each sibling owns the
+requirements it carries. A requirement that an open sibling owns is
+**deferred** — planned for that ticket, so it is not a gap in this one.
 
 ## 3. Baseline — typecheck and test first
 
@@ -72,12 +78,16 @@ silently absorb or attribute to yourself.
 
 It is a **read-only reporter**: it reads, it reports, it edits nothing. Every fix
 belongs in this window. Give it the diff command from step 1, the commit list where
-there is one, and the path or fetched contents of the spec.
+there is one, and the path or fetched contents of the spec. For a ticket, also give
+it the parent spec and the sibling tickets with their state.
 
-The brief: "Report: (a) requirements the spec asked for that are missing or
-partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c)
-requirements that look implemented but where the implementation looks wrong. Quote
-the spec line for each finding. Under 400 words."
+The brief: "Judge the diff against the requirements this issue owns — for a
+ticket, its acceptance criteria. Report: (a) owned requirements that are missing or
+partial; (b) behaviour in the diff that wasn't asked for, or that an open sibling
+owns (scope creep); (c) requirements that look implemented but where the
+implementation looks wrong; (d) spec requirements that no ticket owns. List
+separately each **deferred** requirement with the sibling that owns it. Quote the
+spec line for each finding. Under 400 words."
 
 Its report has no bearing on the attack, so **start step 5 while it runs**.
 
@@ -107,9 +117,10 @@ Done when every mutant is dead and nothing dodgy is left untested.
 ## 6. Spec findings — flag, never fill
 
 A coverage gap stays a gap and scope creep stays in the diff, both named in the
-report for the human to decide. For a PRD, code belonging to an *open* sub-issue is
-a scope violation. Where an ambiguous requirement could be read another way that
-serves the stated goal better, say so.
+report for the human to decide. For a ticket, code that an *open* sibling owns is
+scope creep, and a requirement that no ticket owns is a finding on the plan. Where
+an ambiguous requirement could be read another way that serves the stated goal
+better, say so.
 
 This is the frontier: you own the attack, the human owns the product calls.
 
@@ -123,9 +134,10 @@ tree.
 
 Close with the report the human reads, in their configured language. Cover: **what
 you broke and fixed**; **tests you added** and what they protect against; **the
-spec findings you flagged but did NOT touch** (coverage gaps, scope creep, calls
-left to the human); and the **typecheck / test / mutation status** (green, or
-exactly what's still failing).
+spec findings you flagged but did NOT touch** (coverage gaps, scope creep,
+requirements no ticket owns, calls left to the human); **the deferred
+requirements**, each with the ticket that owns it; and the **typecheck / test /
+mutation status** (green, or exactly what's still failing).
 
 ## What this does NOT do
 
