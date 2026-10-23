@@ -1,101 +1,102 @@
 ---
 name: implement
-description: Build one issue end-to-end and hold it to the standards bar — stops with the tree dirty, no commit, push, branch, or issue close.
-argument-hint: "#N (passes an issue URL/path)"
+description: Build one issue through three fresh-eyes phases — build, harden, gaps — write its docs with you, and report only what needs your eye; stops with the tree dirty.
+argument-hint: "#N [what to complete] (passes an issue URL/path)"
 disable-model-invocation: true
 ---
 
 # Implement
 
-Build **one** issue end-to-end, then **stop and leave the working tree dirty**.
-This is one deliberate step in a human-in-the-loop flow.
+You are the **orchestrator**. You build **one** issue in four steps. Three of them
+are phases, and each phase is a sub-agent with **fresh eyes**: it sees the shared
+pack and the code, never the thinking of the phase before it. Your window holds
+pointers and short returns only — that is where the tokens are saved. The fourth
+step is the **docs**: you write them yourself, with the user, before the last phase.
 
-**Argument:** an issue reference — `/implement #N`, a URL, or a path,
-depending on the repo's tracker. Implement **only** that issue.
+**Argument:** an issue reference — `/implement #N`, a URL, or a path, depending on the
+repo's tracker — plus optional **extra instructions**, such as `completa los huecos 1
+y 3`. Numbers refer to the last report of this session.
 
-## 1. Fetch the issue
+## 1. Write the pack
 
-The issue tracker convention should already be in your context — run
-`/setup-skills` if not. Fetch the given issue **with its full body
-and comments**, and pull in the spec it was cut from if it has one.
+The **pack** is the material all three phases share. Write it once, as one Markdown
+file in a temporary directory outside the repo: the session scratchpad when one
+exists, else `mktemp -d`. Outside the repo, it never enters the diff.
 
-## 2. Load context
+The issue tracker convention should already be in your context — run `/setup-skills`
+if not. Put in the pack one section per heading, so a phase can read only the ones it
+needs:
 
-Before writing code, read the project's own bar and shape: `CONTEXT.md`,
-`docs/`, `CLAUDE.md` / `AGENTS.md`.
+- `## Issue` — the issue, with its full body and comments.
+- `## Spec` — when the issue is a ticket cut from a spec: the spec, and its other
+  tickets with their state.
+- `## Commands` — the repo's **real** typecheck, test and mutation commands. Get
+  them from where the repo documents them — `CLAUDE.md` / `AGENTS.md`, project
+  memory, a `docs/` runbook. Only if they aren't written down anywhere, fall back to
+  `package.json` scripts, a `Makefile`, the README; don't assume `npm`. A repo that
+  documents no mutation command gets `none` on that line.
+- `## Extra instructions` — when given, with each gap number resolved to the
+  requirement text it names.
 
-When the issue carries **Bearings**, read there first — they are an estimate of
-where the work lands, so they spare you the search, not the reading.
+Then check the start state:
 
-Orient in the repo **surgically**: grep for the seam, read the ranges the grep
-points at, and open a whole file when you'll edit it. Nothing you read leaves
-this window, so read what you'll use.
+- Run typecheck and tests; read only the exit status and the failure summary. **Red**
+  → say what fails and stop. Work built on a red base cannot tell who broke what.
+- A **dirty** tree with no extra instructions → ask whether the diff is earlier work
+  on this issue, and stop. With extra instructions, the diff is the base the build
+  phase completes.
 
-The tests already covering the area are material you'll use: they carry the
-conventions the tests you're about to write have to match.
+Done when the pack file exists and the start state is green.
 
-Done when nothing about the repo is left to find out and you can start editing.
+## 2. Run the phases
 
-## 3. Implement (TDD where feasible)
+Run each phase as a foreground `general-purpose` sub-agent, one after the other, on
+the current working tree. Pass **pointers, not content**: the brief names the
+absolute path of the pack and of the phase file, resolved from this skill's
+directory, and restates neither.
 
-Use `/tdd` where possible, at pre-agreed seams.
+1. **Build** — brief: "Read the pack at `<pack>`, then follow `<BUILD.md>`."
+   - Returns **blocked** → stop the flow, put its question to the user in prose, and
+     send the answer to the **same** sub-agent (`SendMessage`), so it keeps the
+     context it loaded.
+   - Returns **red** → stop and report what fails. Hardening red code hides the cause.
+2. **Harden** — brief: "The pack is at `<pack>`. Follow `<HARDEN.md>`. The standards
+   file is `<STANDARDS.md>`." It runs whatever state it leaves.
+3. **Docs** — in this window, with the user, for each doc build returned as
+   **owed**. This is the human-in-the-loop step, so it runs where the user is.
+   Invoke the skill of its kind before you write it:
+   - a `CONTEXT.md` term or an ADR — `/domain-modeling`;
+   - a skill, an `AGENTS.md` / `CLAUDE.md`, a doc a pointer names —
+     `/writing-for-agents`;
+   - any other kind a skill in your list or the repo's `CLAUDE.md` / `AGENTS.md`
+     covers — that skill.
 
-Done when every acceptance criterion is built, and each one that went through a
-seam went **red** before it went green.
+   Put to the user every question those skills raise, and wait for the answer. Done
+   when each owed doc is written, or the user dropped it.
+4. **Gaps** — invoke **`/gaps`** with the pack path, on the dirty tree. It judges the
+   final diff, so it runs last and runs even when harden ended red.
 
-## 4. Autonomy & escalation
+The orchestrator never fills a gap: a requirement that is missing stays missing until
+the user names it in the extra instructions of a later run.
 
-Work autonomously — no plan-approval gate. Escalate to the user (**in prose, no
-interactive prompts**) **only** for a blocking ambiguity that neither the issue,
-its spec, `CONTEXT.md`, nor the ADRs resolve. Don't guess blindly; don't ask
-about everything either.
+## 3. Report — filter for attention
 
-## 5. Feedback loop
+End with the report the user reads, in their configured language. It is a filter,
+not a log: it holds only what the user must decide or look at.
 
-Before stopping, run the repo's **real** typecheck and test commands and get them
-green. Get them from where the repo documents them — `CLAUDE.md` / `AGENTS.md`,
-project memory, a `docs/` runbook. Only if they aren't written down anywhere, fall
-back to discovering them (`package.json` scripts, `Makefile`, README); don't assume
-`npm`, and don't spelunk in a loop.
+- **One status line**: typecheck / test / mutation (green, red, or mutation skipped),
+  plus counts — tests added, standards fixes, deferred requirements.
+- **Look closer** — only when there is something, one line each with `file:line`:
+  - each **bug harden fixed**: a behavior change nobody asked for;
+  - each **real gap** — an owned requirement that is missing, partial or wrong —
+    numbered, so the user can name it in the next run;
+  - **unasked** behavior, **unowned** spec requirements and **ambiguous** ones;
+  - what is still **red**.
 
-## 6. Hold the bar
+An empty **Look closer** leaves the status line as the whole report. What was built,
+the standards fixes and the deferred list stay out of it.
 
-The code works; now make it hold. **The diff is the only evidence** — you wrote these
-lines, so you carry every assumption that went into them, and the assumptions are what
-a bar exists to catch. Judging from memory judges your intent, not the code. So the
-judging goes to a **read-only sub-agent** that has seen nothing but the diff.
+## What this does not do
 
-Give it:
-
-- The diff: `git diff HEAD`, plus `git status` for the untracked files the diff misses.
-- The repo's own standards sources — anything documenting how code should be written
-  here, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
-- The **absolute path to `STANDARDS.md`**, resolved from this skill's own directory.
-  The sub-agent reads it itself — this window never loads it.
-- The brief: "Read the standards file at the path given, then report — per file/hunk
-  where relevant — every place the diff violates (a) a documented repo standard: cite
-  the file + the rule; or (b) a rule from that file: name it and quote the hunk. A
-  documented repo standard overrides it. Skip anything tooling enforces. Report only
-  what genuinely bears on correctness, maintainability, or design, and say what the
-  diff does well. Under 400 words."
-
-**Then fix what it found, here.** Reduce nesting, eliminate redundancy, sharpen names,
-consolidate logic. **Preserve behavior** — change only *how* the code works, never
-*what* it does. Re-run typecheck and tests and get back to green.
-
-A report that finds nothing worth changing is a valid outcome. Only touch what
-genuinely needs it.
-
-## 7. Prune the comments
-
-Invoke **`/prune-comments`** on the change. Done when every comment in the diff has
-faced its verdict.
-
-## 8. Stop — leave it dirty
-
-When the issue is done:
-
-- **Do NOT** commit, push, create a branch, or close the issue. Work on the
-  current branch; branches are the user's concern.
-- End with a short summary: what you built, key decisions, what the standards pass
-  changed, and the typecheck / test status.
+Commit, push, create a branch, or close the issue. Work on the current branch and
+leave the tree dirty; `/commit` is the next deliberate step.

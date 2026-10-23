@@ -13,4 +13,6 @@ The ubiquitous language for this skills harness. Glossary only — no implementa
 - **Provenance** — the full record of where a fork came from and how it syncs: `{ upstream, source, base, mode }`.
 - **Manifest key** — the tool-facing handle for a fork, `<upstream>:<name>` (e.g. `matt:tdd`). Used by commands (`update matt:tdd`). Distinct from the *invocable* name, which comes from the skill's `SKILL.md` frontmatter.
 - **Sync-remotes** — reconciling the local git remotes from the `upstreams` catalog: add missing, fix changed URLs, fetch, set default HEAD. The catalog is the source of truth; remotes are derived.
+- **Owner** — the ticket that carries a spec requirement. A ticket owns its acceptance criteria; each sibling ticket cut from the same spec owns the requirements it carries.
+- **Deferred** — a spec requirement whose owner is an open sibling ticket. Planned work, so it is not a gap in the ticket being judged.
 - **Detach** — dropping a fork's manifest entry while leaving its `mine/` copy intact, turning it back into a self-authored skill. The safe way to stop tracking an upstream without losing work.
