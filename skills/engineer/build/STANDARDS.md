@@ -65,6 +65,7 @@ guards.
 
 ## Restraint
 
+- **Use what the repo holds.** Add a dependency, a helper or a pattern only when nothing in the repo does the job. Reach first for what sibling modules already use.
 - **No speculative generality.** No config, layers, or abstraction "just in case." Build
   for the case in front of you, not an imagined future one.
 - **Don't force DRY.** Extract a repeated shape when both sites change for the **same**
