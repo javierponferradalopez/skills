@@ -120,6 +120,13 @@
       "source": "skills/resolve-conflicts",
       "base": "34fdfc9",
       "mode": "pure"
+    },
+    "matt:prototype": {
+      "upstream": "matt",
+      "mine": "skills/engineer/prototype",
+      "source": "skills/engineering/prototype",
+      "base": "4ae2317",
+      "mode": "pure"
     }
   }
 }
