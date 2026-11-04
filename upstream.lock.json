@@ -84,7 +84,7 @@
       "mine": "skills/engineer/wayfinder",
       "source": "skills/engineering/wayfinder",
       "base": "84fdeff",
-      "mode": "pure"
+      "mode": "modified"
     },
     "matt:writing-for-agents": {
       "upstream": "matt",
