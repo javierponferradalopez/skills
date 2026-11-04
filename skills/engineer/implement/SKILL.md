@@ -19,20 +19,21 @@ requirement text it names.
 
 ## 1. Run the steps
 
-Send the user one short line as each step starts.
+Each step runs in a new **foreground** sub-agent that can edit files, and you wait
+for its return. Send the user one short line as each step starts.
 
-1. **Build** — a foreground `general-purpose` sub-agent. Brief: "Invoke `/build #N`
-   `<extra instructions>`. You run under `/implement`." Its return starts with one of:
+1. **Build** — Brief: "Invoke `/build #N` `<extra instructions>`. You run under
+   `/implement`." Its return starts with one of:
    - **blocked** → put its question to the user in prose, and send the answer to the
-     **same** sub-agent (`SendMessage`), so it keeps the context it loaded.
+     **same** sub-agent, so it keeps the context it loaded.
    - **red** → stop and report what fails. Hardening red code hides the cause.
    - **done** → keep its **decisions** for the report.
-2. **Harden** — a foreground `general-purpose` sub-agent. Brief: "Invoke `/harden #N`
-   on the dirty tree. You run under `/implement`." Skip it when the diff holds no
-   code — only docs, ADRs, or config with no logic.
-3. **Gaps** — a foreground `general-purpose` sub-agent. Brief: "Invoke `/gaps #N` on
-   the dirty tree. You run under `/implement`." It judges the final diff, so it runs
-   last and runs even when harden ended red.
+2. **Harden** — Brief: "Invoke `/harden #N` on the dirty tree. You run under
+   `/implement`." Skip it when the diff holds no code — only docs, ADRs, or config
+   with no logic.
+3. **Gaps** — Brief: "Invoke `/gaps #N` on the dirty tree. You run under
+   `/implement`." It judges the final diff, so it runs last and runs even when harden
+   ended red.
 
 The orchestrator never fills a gap: a requirement that is missing stays missing until
 the user names it in the extra instructions of a later run.
