@@ -2,7 +2,7 @@
 #
 # bin/dev-link — LOCAL DEVELOPMENT tool for the maintainer of this repo.
 #
-# Symlinks the skills in this repo into ~/.claude/ so edits made here apply
+# Symlinks the skills in this repo into ~/.agents/skills/ so edits made here apply
 # instantly in your live harness. This is NOT the public install path: end
 # users install individual skills with `npx skills add` (see README).
 #
@@ -18,7 +18,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-TARGET_DIR="$HOME/.claude"
+TARGET_DIR="$HOME/.agents"
 
 LINK_ALL=0
 for arg in "$@"; do
@@ -28,7 +28,7 @@ for arg in "$@"; do
             cat <<'EOF'
 Usage: bin/dev-link [options]
 
-Local-development tool: symlinks this repo's skills into ~/.claude/.
+Local-development tool: symlinks this repo's skills into ~/.agents/skills/.
 End users should install skills with `npx skills add` instead (see README).
 
 Options:
@@ -80,8 +80,8 @@ link_if_safe() {
 #
 # In this repo skills are organized into category folders for browsing:
 #   skills/<category>/<name>/SKILL.md   (e.g. skills/engineer/tdd/SKILL.md).
-# Claude Code requires a FLAT layout, so we flatten the categories away and
-# link every skill into ~/.claude/skills/<name>/. Categories are purely an
+# Harnesses require a FLAT layout, so we flatten the categories away and
+# link every skill into ~/.agents/skills/<name>/. Categories are purely an
 # authoring convenience and never reach the link target. Skill names are
 # intent-based (no category prefixes), so they stay unique across categories.
 # ---------------------------------------------------------------------------
@@ -266,7 +266,7 @@ else
     for ((i = 0; i < ${#DIRS[@]}; i++)); do SELECTED[i]=1; done
 fi
 
-step "Ensuring ~/.claude/ structure"
+step "Ensuring ~/.agents/skills/ structure"
 mkdir -p "$TARGET_DIR/skills"
 ok "$TARGET_DIR"
 
@@ -282,7 +282,25 @@ if [[ $linked -eq 0 ]]; then
     skip "No skills selected — nothing to link."
 fi
 
+# Claude Code reads only ~/.claude/skills/, so mirror each linked skill there
+# through ~/.agents/skills/. An older link that resolves to the same skill is
+# left as it is.
+CLAUDE_DIR="$HOME/.claude"
+if [[ -d "$CLAUDE_DIR" && $linked -gt 0 ]]; then
+    step "Mirroring into ~/.claude/skills/ (Claude Code)"
+    mkdir -p "$CLAUDE_DIR/skills"
+    for ((i = 0; i < ${#DIRS[@]}; i++)); do
+        [[ "${SELECTED[i]}" -eq 1 ]] || continue
+        target="$CLAUDE_DIR/skills/${NAMES[i]}"
+        if [[ -L "$target" && "$(cd "$target" 2>/dev/null && pwd -P)" == "$(cd "${DIRS[i]}" && pwd -P)" ]]; then
+            ok "${LABELS[i]} (already linked)"
+        else
+            link_if_safe "$TARGET_DIR/skills/${NAMES[i]}" "$target" "${LABELS[i]}"
+        fi
+    done
+fi
+
 step "Done."
 echo
 echo "Next steps:"
-echo "  - Open a new Claude Code session for the skills to be discovered."
+echo "  - Open a new session (or run /reload in pi) for the skills to be discovered."

@@ -8,7 +8,7 @@
 |_|   \___/|_| |_|_|  \___| |___/ |____/|_|\_\_|_|_|___/
 </pre>
 
-**A personal development harness for Claude Code.**
+**A personal development harness for coding agents — Claude Code, pi or any other.**
 
 A curated set of independent skills that turn vague tasks into shipped code with a disciplined, conscious workflow — _no vibe coding_.
 

@@ -4,14 +4,14 @@ This document is for the **owner and forkers** of this repo — not for people w
 just want to use a skill. If you only want to install skills, see the
 [README](./README.md): `npx skills@latest add javierponferradalopez/skills`.
 
-Here lives everything that never ships to a user's `~/.claude`: why the repo is
+Here lives everything that never ships to a user's `~/.agents/skills`: why the repo is
 shaped the way it is, how forked skills are kept in sync with their upstreams,
 the local-development symlink tool, and the repository layout.
 
 ## Contents
 
 - [Why this exists](#why-this-exists) — the philosophy: own your skills, borrow the best, stay in control
-- [Repository layout](#repository-layout) — categories and how they map to `~/.claude`
+- [Repository layout](#repository-layout) — categories and how they map to `~/.agents/skills`
 - [Local development — `bin/dev-link`](#local-development--bindev-link) — symlink the repo into your live harness
   - [Uninstall the symlinks](#uninstall-the-symlinks)
 - [Syncing with upstreams](#syncing-with-upstreams) — pull other creators' updates without losing your edits
@@ -21,7 +21,7 @@ the local-development symlink tool, and the repository layout.
 
 ## Why this exists
 
-Skills are quickly becoming one of the highest-leverage ways to shape how Claude Code works. Brilliant people are publishing their own — but a raw fork has a problem: the moment you tweak someone's skill to fit your workflow, you either freeze it (and miss their improvements) or keep pulling (and clobber your edits). You end up depending 100% on an external source you can't safely change.
+Skills are quickly becoming one of the highest-leverage ways to shape how a coding agent works. Brilliant people are publishing their own — but a raw fork has a problem: the moment you tweak someone's skill to fit your workflow, you either freeze it (and miss their improvements) or keep pulling (and clobber your edits). You end up depending 100% on an external source you can't safely change.
 
 This repo is built around a different stance: **borrow the best, but own what you run.**
 
@@ -37,8 +37,8 @@ The result: a harness that grows with the wider community **and** stays fully un
 ## Repository layout
 
 In this repo skills are organized into category folders for browsing:
-`skills/<category>/<name>/` (e.g. `skills/engineer/tdd/SKILL.md`). Claude Code
-requires a **flat** layout, so anything that places a skill flattens the
+`skills/<category>/<name>/` (e.g. `skills/engineer/tdd/SKILL.md`). Harnesses
+require a **flat** layout, so anything that places a skill flattens the
 categories away and lands it at `<agent>/skills/<name>/`. Categories are an
 authoring convenience only; names are **intent-based** and stay unique across
 categories, with no category prefixes.
@@ -47,7 +47,7 @@ Two consumers rely on this layout:
 
 - The public `npx skills add` path — the skills.sh CLI natively understands this
   "catalog layout" and flattens each skill's container as it installs.
-- `bin/dev-link` — flattens the categories into symlinks under `~/.claude/skills/`
+- `bin/dev-link` — flattens the categories into symlinks under `~/.agents/skills/`
   (see below).
 
 ---
@@ -55,9 +55,13 @@ Two consumers rely on this layout:
 ## Local development — `bin/dev-link`
 
 `bin/dev-link` is the **maintainer's local-development tool**. It symlinks the
-skills in this repo into `~/.claude/skills/` so that edits made here apply
+skills in this repo into `~/.agents/skills/` so that edits made here apply
 instantly in your live harness — no re-link between changes. It is **not** the
 public install path; end users install individual skills with `npx skills add`.
+
+pi and other harnesses read `~/.agents/skills/`. Claude Code reads only
+`~/.claude/skills/`, so when `~/.claude/` exists, the tool also links each skill
+there, through its `~/.agents/skills/` link.
 
 Run everything from the root of this repo.
 
@@ -116,7 +120,7 @@ The tool is **non-destructive and idempotent**:
 
 | Situation                                            | Behavior                                                          |
 | ---------------------------------------------------- | ---------------------------------------------------------------- |
-| Empty `~/.claude/skills/`                            | Symlinks every skill cleanly.                                    |
+| Empty `~/.agents/skills/`                            | Symlinks every skill cleanly.                                    |
 | You already have a skill with the same name          | Skips it with a log line. Your version wins.                     |
 | You have skills in unrelated categories              | They coexist — the tool only touches paths inside this package.  |
 | Re-running the tool                                  | Detects what's already linked; no duplicates, no errors.         |
@@ -129,7 +133,7 @@ Personal state (`memory/`, `projects/`, `todos/`, `sessions/`, credentials, loca
 
 ```bash
 # Remove the harness symlinks; your real files and other skills stay.
-find ~/.claude -maxdepth 2 -type l -lname "*/skills/*" -delete
+find ~/.agents/skills ~/.claude/skills -maxdepth 1 -type l -lname "*/skills/*" -delete
 ```
 
 ---
@@ -203,7 +207,7 @@ bin/skills-upstream doctor         # confirms the manifest, paths and remotes ar
 
 ### The tool: `bin/skills-upstream`
 
-It runs only in this authoring repo (it needs `jq` and the git history); it never ships to `~/.claude`. Each origin maps to a git remote `upstream-<key>`, and the compare ref is `upstream-<key>/<branch>` (the catalog branch, or the remote's default HEAD when none is pinned).
+It runs only in this authoring repo (it needs `jq` and the git history); it never ships to `~/.agents/skills`. Each origin maps to a git remote `upstream-<key>`, and the compare ref is `upstream-<key>/<branch>` (the catalog branch, or the remote's default HEAD when none is pinned).
 
 | Command                                            | What it does                                                                 |
 | -------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -235,7 +239,7 @@ bin/skills-upstream add alice skills/agents/prototype skills/engineer/prototype 
 
 - `<key>` is the upstream's catalog key. `add` fails clearly if it isn't registered yet, pointing you to `upstream-add`.
 - `<source>` is the path **in that upstream's repo** (find it with `git ls-tree -r --name-only upstream-<key>/HEAD | grep <name>`).
-- `[<mine>]` is where it lands in *your* tree (default `skills/productivity/<name>`). Pick any category folder — the layout is flattened to `~/.claude/skills/<name>/` anyway.
+- `[<mine>]` is where it lands in *your* tree (default `skills/productivity/<name>`). Pick any category folder — the layout is flattened to `~/.agents/skills/<name>/` anyway.
 - `[<mode>]` defaults to `pure` (track the upstream verbatim). If you plan to customize it, pass `modified`, or flip its `mode` in the manifest once you start editing — otherwise the next `update` will overwrite your changes.
 
 `add` copies **all** of the skill's files (e.g. `SKILL.md` plus any `UI.md`, `GLOSSARY.md`, `scripts/`), registers it as `<key>:<name>`, pins `base` to the current upstream ref, and refuses to clobber an existing skill or folder-name collision. In the rare case where one upstream has two sources sharing a basename, `add` asks for an explicit suffix to disambiguate the key. The new skill's invocation name comes from its `SKILL.md` frontmatter `name:`, exactly as the author wrote it.
