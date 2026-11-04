@@ -1,6 +1,6 @@
 ---
 name: gaps
-description: Gaps — judge a change against its ticket, read-only: what it meets, misses, gets wrong, adds unasked, and leaves to a sibling ticket. Fires on a dirty tree, a branch, commit or tag, or a PR, and on any ask whether a change does what its ticket asks.
+description: "Gaps — judge a change against its ticket, read-only: what it meets, misses, gets wrong, adds unasked, and leaves to a sibling ticket. Fires on a dirty tree, a branch, commit or tag, or a PR, and on any ask whether a change does what its ticket asks."
 argument-hint: "[#N ticket] [<fixed-point> | PR #N/URL]"
 ---
 
