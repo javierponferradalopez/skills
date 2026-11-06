@@ -1,19 +1,20 @@
 ---
 name: build
-description: Build one ticket alone, to green, held to the standards bar — no harden, no gaps. Fires on an explicit ask to build a ticket alone, and from `/implement`. The full flow is `/implement`.
+description: Build one ticket alone, to green, held to the standards bar — no harden, no gaps. Fires on an explicit ask to build a ticket alone, and from an orchestrator. The full flow is `/implement`.
 argument-hint: "#N [what to complete]"
 ---
 
 # Build
 
 Build **one** ticket until it works and holds the standards bar, then stop with the
-tree dirty. Harden and gaps are separate skills; `/implement` runs all three.
+tree dirty. Harden and gaps are separate skills; an orchestrator — `/implement`,
+`/implement-spec` — runs all three.
 
 **Argument:** a ticket reference — `#N`, a URL, or a path, depending on the repo's
 tracker — plus optional **extra instructions**, such as "complete the validation of
 the title". Build only that ticket.
 
-**Under `/implement`** the brief says so. Then you are a sub-agent with no user: you
+**Under an orchestrator** the brief says so. Then you are a sub-agent with no user: you
 return your questions, and the orchestrator takes them to the user.
 
 ## 1. Fetch the ticket
@@ -78,7 +79,7 @@ item they name — with its docs written, and each one that went through a seam 
 
 Work autonomously. Stop only for an ambiguity that neither the ticket, its spec,
 `CONTEXT.md`, nor the ADRs resolve: quote the line that is ambiguous and give the
-readings you see. Put it to the user in prose and wait; under `/implement`, return
+readings you see. Put it to the user in prose and wait; under an orchestrator, return
 **blocked** with it, and continue when the answer comes back.
 
 ## 6. Hold the bar
@@ -111,14 +112,7 @@ Run the full test suite, typecheck and lint, one time each, and get them green.
 
 ## 8. Report
 
-Report in the user's configured language; under `/implement`, return it in under 200
-words, and start with **done**, **blocked** or **red**:
-
-- the criteria you built, one line each;
-- the **decisions**, each with its `file:line` and reason;
-- the docs you wrote, one line each: the file, and the term, decision or
-  requirement it holds;
-- the typecheck, lint and test state: green, or what still fails and what you tried.
+Report as [`REPORT.md`](REPORT.md) defines it.
 
 ## What this does not do
 

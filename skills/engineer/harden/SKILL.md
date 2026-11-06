@@ -1,6 +1,6 @@
 ---
 name: harden
-description: Harden — try to break a change that already works, by hand, and write the test that catches each break; leaves the tree green and dirty. Fires on an explicit ask to harden or break a change, and from `/implement`.
+description: Harden — try to break a change that already works, by hand, and write the test that catches each break; leaves the tree green and dirty. Fires on an explicit ask to harden or break a change, and from an orchestrator.
 argument-hint: "[#N ticket]"
 ---
 
@@ -66,13 +66,7 @@ you cannot, say exactly what still fails.
 
 ## 6. Report
 
-Report in the user's configured language; under `/implement`, return it in under 200
-words:
-
-- **Bugs** — each one you fixed: `file:line` and the behavior before and after.
-- **Tests added** — how many, and what they protect against.
-- **State** — typecheck, lint and test: green, or what fails. Say when the tree
-  arrived red, and when no ticket was found.
+Report as [`REPORT.md`](REPORT.md) defines it.
 
 ## What this does not do
 

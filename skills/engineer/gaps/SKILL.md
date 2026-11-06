@@ -57,7 +57,4 @@ quote.
 
 ## 4. Report
 
-Report every status and list, grouped, in the user's configured language; under
-`/implement`, return it in under 400 words. Where an ambiguous requirement could be read another way that serves the
-stated goal better, say so. The calls are the human's: a gap stays a gap, and
-unasked code stays in the diff.
+Report as [`REPORT.md`](REPORT.md) defines it.
