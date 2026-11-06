@@ -17,7 +17,7 @@ Work from whatever is already in the conversation context. If the user passes a 
 
 ### 2. Explore the codebase (optional)
 
-If you have not already explored the codebase, do so to understand the current state of the code. A parent spec's **Bearings** stand in for the part of that exploration that locates the work — take them rather than getting oriented twice. Ticket titles and descriptions should use the project's domain glossary vocabulary, and respect ADRs in the area you're touching.
+If you have not already explored the codebase, do so to understand the current state of the code. A parent spec's **Bearings** stand in for the part of that exploration that locates the work — take them rather than getting oriented twice. Ticket titles and descriptions should use the project's domain glossary vocabulary. Read the ADRs in force in the area you're touching, wherever the project's domain docs keep them: each ticket must comply with them (step 3). When the plan contradicts an ADR, surface it to the user before you cut: _"Contradicts <ADR> — but worth reopening because…"_. If the user reopens it, the first ticket supersedes the ADR and blocks each ticket that the ADR governs.
 
 Look for opportunities to prefactor the code to make the implementation easier. "Make the change easy, then make the easy change."
 
@@ -31,12 +31,13 @@ Break the work into **tracer bullet** tickets.
 - A completed slice is demoable or verifiable on its own
 - Each slice is sized to fit in a single fresh context window
 - Any prefactoring should be done first
+- Each slice complies with every ADR in force in the area it touches, from its first commit — narrow, yet compliant. When compliance makes a slice too big, cut it another way or add a prefactor ticket that blocks it. Violations already in the code stay out of scope; a slice adds none
 
 </vertical-slice-rules>
 
 Give each ticket its **blocking edges** — the other tickets that must complete before it can start. A ticket with no blockers can start immediately.
 
-**Wide refactors are the exception to vertical slicing.** A **wide refactor** is one mechanical change — rename a column, retype a shared symbol — whose **blast radius** fans across the whole codebase, so a single edit breaks thousands of call sites at once and no vertical slice can land green. Don't force it into a tracer bullet; sequence it as **expand–contract**. First expand: add the new form beside the old so nothing breaks. Then migrate the call sites over in batches sized by blast radius (per package, per directory), each batch its own ticket blocked by the expand, keeping CI green batch to batch because the old form still exists. Finally contract: delete the old form once no caller remains, in a ticket blocked by every migrate batch. When even the batches can't stay green alone, keep the sequence but let them share an integration branch that all block a final integrate-and-verify ticket — green is promised only there.
+**Wide refactors are the exception to vertical slicing.** A **wide refactor** is one mechanical change — rename a column, retype a shared symbol — whose **blast radius** fans across the whole codebase, so a single edit breaks thousands of call sites at once and no vertical slice can land green. Don't force it into a tracer bullet; sequence it as **expand–contract**. First expand: add the new form beside the old so nothing breaks. Then migrate the call sites over in batches sized by blast radius (per package, per directory), each batch its own ticket blocked by the expand, keeping CI green batch to batch because the old form still exists. Finally contract: delete the old form once no caller remains, in a ticket blocked by every migrate batch. When even the batches can't stay green alone, keep the sequence but let them share an integration branch that all block a final integrate-and-verify ticket — green is promised only there. ADR compliance follows the same sequence: the old form that lives beside the new one is the only allowed exception, and compliance is promised at the contract ticket — or at the integrate-and-verify ticket.
 
 ### 4. Quiz the user
 
@@ -51,6 +52,7 @@ Ask the user:
 - Does the granularity feel right? (too coarse / too fine)
 - Are the blocking edges correct — does each ticket only depend on tickets that genuinely gate it?
 - Should any tickets be merged or split further?
+- Does each ticket comply with the ADRs in its area, with none left for a later ticket?
 
 Iterate until the user approves the breakdown.
 
@@ -78,6 +80,8 @@ Do NOT close or modify any parent issue.
 
 **Bearings:** the areas the implementer should read to get oriented — the parent's,
 narrowed to this slice, or your own when there's no parent.
+
+**ADRs:** a reference to each ADR in force this slice must comply with, or "None".
 
 </local-ticket-template>
 
@@ -110,6 +114,7 @@ their call, which is what keeps the prefactor free.
 
 - `<area>` — <what the implementer finds there>
 - `<where its tests live>` — the prior art the new tests mirror
+- `<ADR reference>` — each ADR in force this slice must comply with
 
 </issue-template>
 
