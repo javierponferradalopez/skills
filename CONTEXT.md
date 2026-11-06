@@ -15,4 +15,9 @@ The ubiquitous language for this skills harness. Glossary only — no implementa
 - **Sync-remotes** — reconciling the local git remotes from the `upstreams` catalog: add missing, fix changed URLs, fetch, set default HEAD. The catalog is the source of truth; remotes are derived.
 - **Owner** — the ticket that carries a spec requirement. A ticket owns its acceptance criteria; each sibling ticket cut from the same spec owns the requirements it carries.
 - **Deferred** — a spec requirement whose owner is an open sibling ticket. Planned work, so it is not a gap in the ticket being judged.
+- **Stack** — the ordered chain of branches, one per ticket of a spec, each built on the one below it, and opened as stacked PRs.
+- **Ready** — a ticket whose every blocker is **satisfied**, so its work can start.
+- **Satisfied** — a blocker that no longer holds a ticket back: it is closed, it has an open PR, or it has its atomic commits in the current run.
+- **Claim** — the paths that a ticket in progress reports as changed. Another ticket that must change a claimed path waits on the claiming ticket.
+- **Stopped** — a ticket whose run ended before its atomic commits. Its work stays on its own branch, out of the **stack**, for a later run to resume.
 - **Detach** — dropping a fork's manifest entry while leaving its `mine/` copy intact, turning it back into a self-authored skill. The safe way to stop tracking an upstream without losing work.
